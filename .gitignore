@@ -1,6 +1,15 @@
-server/.venv/
-*.pyc
-__pycache__/
+.DS_Store
+.env
 .vscode/
+*.py[cod]
+__pycache__/
+
+server/.venv/
 server/.pytest_cache/
 
+extension/node_modules/
+extension/dist/
+extension/dist.crx
+extension/dist.pem
+extension/playwright-report/
+extension/test-results/
