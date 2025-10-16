@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import type { ProfileTemplate } from '../shared/types';
+import { DEFAULT_OPENAI_API_KEY, DEFAULT_OPENAI_BASE_URL } from '../shared/config';
 import { STORAGE_KEYS, storageGet, storageRemove, storageSet } from '../shared/storage';
 import { normalizeProfileTemplate } from '../shared/profile';
 import { CachingPanel } from './CachingPanel';
 import { KeyManager } from './KeyManager';
 import { ProfileForm } from './ProfileForm';
-
-const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
 
 type KeyState = {
   openaiKey: string;
@@ -16,7 +15,7 @@ type KeyState = {
 
 export const App: React.FC = () => {
   const [keys, setKeys] = useState<KeyState>({
-    openaiKey: '',
+    openaiKey: DEFAULT_OPENAI_API_KEY,
     langGraphKey: '',
     openaiBaseUrl: DEFAULT_OPENAI_BASE_URL
   });
@@ -32,7 +31,7 @@ export const App: React.FC = () => {
     storageGet<Record<string, KeyState>>([STORAGE_KEYS.apiKeys]).then(({ data }) => {
       const stored = data[STORAGE_KEYS.apiKeys] ?? {};
       setKeys({
-        openaiKey: stored.openaiKey ?? '',
+        openaiKey: stored.openaiKey ?? DEFAULT_OPENAI_API_KEY,
         langGraphKey: stored.langGraphKey ?? '',
         openaiBaseUrl: stored.openaiBaseUrl ?? DEFAULT_OPENAI_BASE_URL
       });

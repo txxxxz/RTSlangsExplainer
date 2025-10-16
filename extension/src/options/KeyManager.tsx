@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { DEFAULT_OPENAI_API_KEY, DEFAULT_OPENAI_BASE_URL } from '../shared/config';
 
 interface KeyManagerProps {
   value: {
@@ -14,16 +15,14 @@ interface KeyManagerProps {
 }
 
 export const KeyManager: React.FC<KeyManagerProps> = ({ value, onSave }) => {
-  const [openaiKey, setOpenaiKey] = useState(value.openaiKey);
+  const [openaiKey, setOpenaiKey] = useState(value.openaiKey || DEFAULT_OPENAI_API_KEY);
   const [langGraphKey, setLangGraphKey] = useState(value.langGraphKey ?? '');
-  const [openaiBaseUrl, setOpenaiBaseUrl] = useState(
-    value.openaiBaseUrl ?? 'https://api.openai.com/v1'
-  );
+  const [openaiBaseUrl, setOpenaiBaseUrl] = useState(value.openaiBaseUrl ?? DEFAULT_OPENAI_BASE_URL);
 
   useEffect(() => {
-    setOpenaiKey(value.openaiKey);
+    setOpenaiKey(value.openaiKey || DEFAULT_OPENAI_API_KEY);
     setLangGraphKey(value.langGraphKey ?? '');
-    setOpenaiBaseUrl(value.openaiBaseUrl ?? 'https://api.openai.com/v1');
+    setOpenaiBaseUrl(value.openaiBaseUrl ?? DEFAULT_OPENAI_BASE_URL);
   }, [value]);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -52,14 +51,14 @@ export const KeyManager: React.FC<KeyManagerProps> = ({ value, onSave }) => {
         placeholder="lg-..."
       />
 
-      <label htmlFor="openaiBaseUrl">OpenAI Base URL</label>
-      <input
-        id="openaiBaseUrl"
-        value={openaiBaseUrl}
-        onChange={(event) => setOpenaiBaseUrl(event.target.value)}
-        placeholder="https://api.openai.com/v1"
-        required
-      />
+  <label htmlFor="openaiBaseUrl">OpenAI Base URL</label>
+  <input
+    id="openaiBaseUrl"
+    value={openaiBaseUrl}
+    onChange={(event) => setOpenaiBaseUrl(event.target.value)}
+    placeholder={DEFAULT_OPENAI_BASE_URL}
+    required
+  />
 
       <button className="primary" type="submit">
         Save Keys

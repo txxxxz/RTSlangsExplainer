@@ -7,7 +7,8 @@ import {
   writeDeepToCache,
   writeQuickToCache
 } from './cache';
-import { DEFAULT_OPENAI_BASE_URL, getApiKeys, saveApiKeys } from './keyStore';
+import { DEFAULT_OPENAI_BASE_URL } from '../shared/config';
+import { getApiKeys, saveApiKeys } from './keyStore';
 import { getActiveProfile } from './profileStore';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry';
 import { normalizeProfileTemplate } from '../shared/profile';

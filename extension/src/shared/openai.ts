@@ -34,8 +34,8 @@ export async function fetchQuickExplain(
   }
 
   const data = await response.json();
-  const text = Array.isArray(data.output_text) ? data.output_text.join('\n') : data.output_text;
-  const [literal, context] = parseQuickResponse(text);
+  const rawOutput = extractOutputText(data);
+  const [literal, context] = parseQuickResponse(rawOutput);
   const ttl = 1000 * 60 * 30; // 30 minutes
   return {
     requestId: payload.requestId,
@@ -76,6 +76,86 @@ function buildQuickPrompt(payload: ExplainRequestPayload, profile?: ProfileTempl
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+function extractOutputText(data: unknown): string {
+  if (!data) return '';
+  if (typeof data === 'string') return data;
+
+  const outputText = (data as { output_text?: unknown }).output_text;
+  if (typeof outputText === 'string') return outputText;
+  if (Array.isArray(outputText)) {
+    return outputText.map((part) => (typeof part === 'string' ? part : JSON.stringify(part))).join('\n');
+  }
+
+  const output = (data as { output?: unknown }).output;
+  if (Array.isArray(output)) {
+    const flattened = output
+      .map((item) => extractOutputText((item as { content?: unknown }).content))
+      .filter(Boolean);
+    if (flattened.length) return flattened.join('\n');
+  }
+
+  const content = (data as { content?: unknown }).content;
+  if (Array.isArray(content)) {
+    const flattened = content
+      .map((piece) => {
+        if (!piece) return '';
+        if (typeof piece === 'string') return piece;
+        if (typeof piece === 'object') {
+          if ('text' in (piece as { text?: unknown }) && typeof (piece as { text?: unknown }).text === 'string') {
+            return (piece as { text: string }).text;
+          }
+          if ('content' in piece) {
+            return extractOutputText((piece as { content?: unknown }).content);
+          }
+        }
+        return '';
+      })
+      .filter(Boolean);
+    if (flattened.length) return flattened.join('\n');
+  }
+
+  if (content && typeof content === 'object' && 'text' in (content as { text?: unknown })) {
+    const textValue = (content as { text?: unknown }).text;
+    if (typeof textValue === 'string') return textValue;
+  }
+
+  const choices = (data as { choices?: unknown }).choices;
+  if (Array.isArray(choices) && choices.length) {
+    const choiceText = choices
+      .map((choice) => {
+        if (!choice || typeof choice !== 'object') return '';
+        const message = (choice as { message?: unknown }).message;
+        if (message && typeof message === 'object') {
+          const msgContent = (message as { content?: unknown }).content;
+          if (typeof msgContent === 'string') return msgContent;
+          if (Array.isArray(msgContent)) {
+            return msgContent
+              .map((item) => {
+                if (!item) return '';
+                if (typeof item === 'string') return item;
+                if (typeof item === 'object') {
+                  if ('text' in item && typeof (item as { text?: unknown }).text === 'string') {
+                    return (item as { text: string }).text;
+                  }
+                }
+                return '';
+              })
+              .filter(Boolean)
+              .join('\n');
+          }
+        }
+        const text = (choice as { text?: unknown }).text;
+        if (typeof text === 'string') return text;
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n');
+    if (choiceText) return choiceText;
+  }
+
+  return '';
 }
 
 function parseQuickResponse(responseText: string): [string, string] {

@@ -1,3 +1,4 @@
+import { DEFAULT_OPENAI_API_KEY, DEFAULT_OPENAI_BASE_URL } from '../shared/config';
 import { STORAGE_KEYS, storageGet, storageSet } from '../shared/storage';
 
 interface ApiKeys {
@@ -11,7 +12,7 @@ export async function getApiKeys(): Promise<ApiKeys> {
   const stored: ApiKeys = data[STORAGE_KEYS.apiKeys] ?? {};
   return {
     openaiBaseUrl: stored.openaiBaseUrl ?? DEFAULT_OPENAI_BASE_URL,
-    openaiKey: stored.openaiKey,
+    openaiKey: stored.openaiKey ?? DEFAULT_OPENAI_API_KEY,
     langGraphKey: stored.langGraphKey
   };
 }
@@ -19,5 +20,3 @@ export async function getApiKeys(): Promise<ApiKeys> {
 export async function saveApiKeys(keys: ApiKeys) {
   await storageSet({ [STORAGE_KEYS.apiKeys]: keys });
 }
-
-export const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';

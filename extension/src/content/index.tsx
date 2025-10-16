@@ -8,6 +8,31 @@ import { DeepDrawer } from './ui/DeepDrawer';
 import { QuickExplainBubble } from './ui/QuickExplainBubble';
 import { TriggerButton } from './ui/TriggerButton';
 
+function isExtensionContextInvalid(error: unknown) {
+  return (
+    error instanceof Error &&
+    typeof error.message === 'string' &&
+    error.message.includes('Extension context invalidated')
+  );
+}
+
+function sendMessageSafe(
+  message: Parameters<typeof chrome.runtime.sendMessage>[0],
+  debugLabel: string
+) {
+  if (!chrome.runtime?.id) {
+    console.warn('[LinguaLens] Runtime unavailable, skip message', debugLabel);
+    return;
+  }
+  Promise.resolve(chrome.runtime.sendMessage(message)).catch((error) => {
+    if (isExtensionContextInvalid(error)) {
+      console.warn('[LinguaLens] Extension context invalidated, drop message', debugLabel);
+      return;
+    }
+    console.error('[LinguaLens] Failed to send message', debugLabel, error);
+  });
+}
+
 const primaryLanguage = safeParseLanguage(navigator.language);
 const secondaryLanguage = primaryLanguage.startsWith('en') ? undefined : 'en';
 
@@ -142,17 +167,20 @@ const Overlay: React.FC = () => {
     setQuickLoading(true);
     setDeepData(undefined);
     setQuickResponse(undefined);
-    chrome.runtime.sendMessage({
-      type: 'EXPLAIN_REQUEST',
-      payload: {
-        requestId,
-        subtitleText: text,
-        surrounding: context,
-        timestamp: Date.now(),
-        mode: 'quick',
-        languages
-      }
-    });
+    sendMessageSafe(
+      {
+        type: 'EXPLAIN_REQUEST',
+        payload: {
+          requestId,
+          subtitleText: text,
+          surrounding: context,
+          timestamp: Date.now(),
+          mode: 'quick',
+          languages
+        }
+      },
+      'quick-explain'
+    );
   }
 
   function triggerDeepExplain() {
@@ -162,17 +190,20 @@ const Overlay: React.FC = () => {
     setDeepLoading(true);
     setDeepData((prev) => ({ ...(prev ?? {}), requestId }));
     setDrawerOpen(true);
-    chrome.runtime.sendMessage({
-      type: 'EXPLAIN_REQUEST',
-      payload: {
-        requestId,
-        subtitleText: currentLine,
-        surrounding,
-        timestamp: Date.now(),
-        mode: 'deep',
-        languages
-      }
-    });
+    sendMessageSafe(
+      {
+        type: 'EXPLAIN_REQUEST',
+        payload: {
+          requestId,
+          subtitleText: currentLine,
+          surrounding,
+          timestamp: Date.now(),
+          mode: 'deep',
+          languages
+        }
+      },
+      'deep-explain'
+    );
   }
 
   return (
