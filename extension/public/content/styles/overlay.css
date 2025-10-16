@@ -1,0 +1,257 @@
+.lingualens-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: #0f172a;
+  pointer-events: none;
+}
+
+.lingualens-root .hidden {
+  display: none;
+}
+
+.lingualens-trigger {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: none;
+  background: rgba(37, 99, 235, 0.92);
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+}
+
+.lingualens-trigger:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.lingualens-bubble {
+  position: absolute;
+  right: 24px;
+  bottom: 72px;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(4px);
+  border-radius: 12px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  padding: 16px;
+  pointer-events: auto;
+}
+
+.lingualens-bubble header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+
+.lingualens-bubble header .actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lingualens-bubble header .primary {
+  border: none;
+  background: #2563eb;
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.lingualens-bubble header .primary[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.lingualens-bubble header .ghost {
+  border: none;
+  background: transparent;
+  color: #475569;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lingualens-bubble header .ghost:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+
+.lingualens-bubble .anchor {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.lingualens-bubble .literal,
+.lingualens-bubble .context {
+  margin: 6px 0;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.lingualens-bubble .status {
+  font-size: 13px;
+  color: #475569;
+}
+
+.lingualens-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 360px;
+  height: 100vh;
+  background: #fff;
+  box-shadow: -24px 0 48px rgba(15, 23, 42, 0.18);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  pointer-events: auto;
+}
+
+.lingualens-drawer header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lingualens-drawer nav {
+  display: flex;
+  gap: 8px;
+}
+
+.lingualens-drawer nav button {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.5);
+  background: transparent;
+  cursor: pointer;
+}
+
+.lingualens-drawer nav button.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.lingualens-drawer section {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.5;
+  padding-bottom: 24px;
+}
+
+.lingualens-drawer .sources {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lingualens-drawer .sources li a {
+  color: #2563eb;
+}
+
+.lingualens-drawer .badge {
+  margin-left: 8px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  text-transform: capitalize;
+}
+
+.lingualens-drawer .badge-high {
+  background: rgba(22, 163, 74, 0.15);
+  color: #15803d;
+}
+
+.lingualens-drawer .badge-medium {
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+}
+
+.lingualens-drawer .badge-low {
+  background: rgba(248, 113, 113, 0.15);
+  color: #b91c1c;
+}
+
+.lingualens-drawer .background .note,
+.lingualens-drawer .cross-culture-block .note {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #475569;
+}
+
+.lingualens-drawer .confidence {
+  font-size: 12px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lingualens-drawer .cross-culture-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lingualens-drawer .cross-culture {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.lingualens-drawer .cross-culture li {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  padding: 12px;
+  background: rgba(248, 250, 252, 0.6);
+}
+
+.lingualens-drawer .cross-culture .entry-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.lingualens-drawer .cross-culture .profile-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.lingualens-drawer .sources-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

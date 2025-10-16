@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: lingualens-server
+Version: 0.1.0
+Summary: Backend service for LinguaLens Deep Explain and cultural profiles.
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.111.0
+Requires-Dist: uvicorn[standard]>=0.30.1
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: redis>=5.0.4
+Requires-Dist: pydantic>=2.7.1
+Requires-Dist: pydantic-settings>=2.2.1
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: tiktoken>=0.7.0
+Requires-Dist: chromadb>=0.5.0
+Requires-Dist: faiss-cpu>=1.8.0
+Requires-Dist: sentence-transformers>=3.0.1
+Provides-Extra: dev
+Requires-Dist: pytest>=8.1.1; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23.6; extra == "dev"
+Requires-Dist: pytest-mock>=3.14.0; extra == "dev"

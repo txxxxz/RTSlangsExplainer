@@ -1,0 +1,1 @@
+"""LinguaLens FastAPI application package."""
