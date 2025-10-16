@@ -4,8 +4,6 @@ from typing import Literal, Sequence
 
 from pydantic import BaseModel, Field
 
-from .profile import ProfileTemplate
-
 
 class LanguagePair(BaseModel):
     primary: str = Field(..., description="User's primary language code.")

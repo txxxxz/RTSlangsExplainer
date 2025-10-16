@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import type { ProfileTemplate } from '../shared/types';
-import { STORAGE_KEYS } from '../shared/storage';
+import { STORAGE_KEYS, storageGet, storageRemove, storageSet } from '../shared/storage';
 import { normalizeProfileTemplate } from '../shared/profile';
 import { CachingPanel } from './CachingPanel';
 import { KeyManager } from './KeyManager';
@@ -29,8 +29,8 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    chrome.storage.sync.get([STORAGE_KEYS.apiKeys], (result) => {
-      const stored = result[STORAGE_KEYS.apiKeys] ?? {};
+    storageGet<Record<string, KeyState>>([STORAGE_KEYS.apiKeys]).then(({ data }) => {
+      const stored = data[STORAGE_KEYS.apiKeys] ?? {};
       setKeys({
         openaiKey: stored.openaiKey ?? '',
         langGraphKey: stored.langGraphKey ?? '',
@@ -44,8 +44,8 @@ export const App: React.FC = () => {
   }, []);
 
   function loadActiveProfile() {
-    chrome.storage.sync.get([STORAGE_KEYS.activeProfile], (result) => {
-      const profile = result[STORAGE_KEYS.activeProfile] as ProfileTemplate | undefined;
+    storageGet<Record<string, ProfileTemplate>>([STORAGE_KEYS.activeProfile]).then(({ data }) => {
+      const profile = data[STORAGE_KEYS.activeProfile] as ProfileTemplate | undefined;
       setActiveProfileId(profile?.id);
     });
   }
@@ -82,7 +82,7 @@ export const App: React.FC = () => {
 
   async function handleSaveKeys(nextKeys: KeyState) {
     setKeys(nextKeys);
-    chrome.storage.sync.set({ [STORAGE_KEYS.apiKeys]: nextKeys });
+    await storageSet({ [STORAGE_KEYS.apiKeys]: nextKeys });
     await sendMessage({
       type: 'STORE_API_KEYS',
       payload: nextKeys
@@ -103,18 +103,16 @@ export const App: React.FC = () => {
       payload: { id }
     });
     if (id === activeProfileId) {
-      chrome.storage.sync.remove(STORAGE_KEYS.activeProfile, () => {
-        setActiveProfileId(undefined);
-      });
+      await storageRemove(STORAGE_KEYS.activeProfile);
+      setActiveProfileId(undefined);
     }
     await refreshProfiles();
   }
 
   async function handleSetActiveProfile(profile: ProfileTemplate) {
     const normalized = normalizeProfileTemplate(profile);
-    chrome.storage.sync.set({ [STORAGE_KEYS.activeProfile]: normalized }, () => {
-      setActiveProfileId(normalized.id);
-    });
+    await storageSet({ [STORAGE_KEYS.activeProfile]: normalized });
+    setActiveProfileId(normalized.id);
   }
 
   return (
