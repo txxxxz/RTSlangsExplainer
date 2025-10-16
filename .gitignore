@@ -2,4 +2,5 @@ server/.venv/
 *.pyc
 __pycache__/
 .vscode/
-server/.venv/ # 若还没加忽略规则
+server/.pytest_cache/
+
