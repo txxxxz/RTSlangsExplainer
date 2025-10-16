@@ -18,10 +18,20 @@ const quickResponse = {
   expiresAt: Date.now() + 1000
 };
 
+const crossCulture = [
+  {
+    profileId: 'p-default',
+    profileName: 'Default Profile',
+    analogy: 'Cross culture snippet',
+    confidence: 'medium',
+    notes: 'Tailored for the active profile.'
+  }
+];
+
 const deepProgress = {
   requestId: 'test-request',
   background: 'Background section streamed',
-  crossCulture: 'Cross culture snippet',
+  crossCulture,
   sources: [
     {
       title: 'Mock Source',
@@ -35,9 +45,10 @@ const deepProgress = {
 const deepComplete = {
   requestId: 'test-request',
   background: 'Background section streamed',
-  crossCulture: 'Cross culture snippet',
+  crossCulture,
   sources: deepProgress.sources,
   confidence: 'high',
+  confidenceNotes: 'High agreement between knowledge sources.',
   generatedAt: Date.now()
 };
 
