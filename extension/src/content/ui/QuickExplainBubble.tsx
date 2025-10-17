@@ -5,6 +5,7 @@ interface QuickExplainBubbleProps {
   anchorText: string;
   loading: boolean;
   response?: QuickExplainResponse;
+  error?: string | null;
   onDeepExplain(): void;
   onClose?(): void;
 }
@@ -13,6 +14,7 @@ export const QuickExplainBubble: React.FC<QuickExplainBubbleProps> = ({
   anchorText,
   loading,
   response,
+  error,
   onDeepExplain,
   onClose
 }) => {
@@ -39,6 +41,7 @@ export const QuickExplainBubble: React.FC<QuickExplainBubbleProps> = ({
       <section>
         <p className="anchor">{anchorText}</p>
         {loading && <p className="status">Thinking…</p>}
+        {!loading && error && <p className="status error">Quick Explain unavailable: {error}</p>}
         {!loading && response && (
           <>
             <p className="literal">

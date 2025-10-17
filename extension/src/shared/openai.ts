@@ -1,4 +1,4 @@
-import type { ExplainRequestPayload, ProfileTemplate, QuickExplainResponse } from './types';
+import type { ExplainRequestPayload, ProfileTemplate, QuickExplainResponse } from './types.js';
 
 interface OpenAIQuickBody {
   model: string;

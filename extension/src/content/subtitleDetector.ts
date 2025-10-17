@@ -76,6 +76,7 @@ export class SubtitleDetector {
   private lastSubtitle = '';
   private ocrCooldown = false;
   private domMisses = 0;
+  private cachedVideo: HTMLVideoElement | null = null;
 
   start() {
     const debouncedScan = debounce(() => this.scanDom(), 150);
@@ -85,6 +86,7 @@ export class SubtitleDetector {
       subtree: true,
       characterData: true
     });
+    this.cachedVideo = null;
     const initialSelectors = this.buildSelectorList();
     debugLog('Subtitle detector started', {
       host: window.location.hostname,
@@ -97,6 +99,7 @@ export class SubtitleDetector {
     this.observer?.disconnect();
     debugLog('Subtitle detector stopped');
     this.listeners.clear();
+    this.cachedVideo = null;
   }
 
   onSubtitle(listener: SubtitleListener) {
@@ -390,7 +393,44 @@ export class SubtitleDetector {
   }
 
   private getVideoElement() {
-    return document.querySelector<HTMLVideoElement>('video');
+    if (this.cachedVideo && document.contains(this.cachedVideo)) {
+      const rect = this.cachedVideo.getBoundingClientRect();
+      if (rect.width > 2 && rect.height > 2) {
+        return this.cachedVideo;
+      }
+      this.cachedVideo = null;
+    }
+    const videos = Array.from(document.querySelectorAll<HTMLVideoElement>('video'));
+    let bestVideo: HTMLVideoElement | null = null;
+    let bestScore = -Infinity;
+    for (const video of videos) {
+      const style = window.getComputedStyle(video);
+      if (style.display === 'none') continue;
+      if (style.visibility === 'hidden') continue;
+      if (Number.parseFloat(style.opacity) === 0) continue;
+      const rect = video.getBoundingClientRect();
+      const area = rect.width * rect.height;
+      if (area < 100) continue;
+      // YouTube injects multiple hidden <video> elements; rank by area so we lock onto the actual player surface.
+      const readyBoost = video.readyState >= 2 ? 1 : 0;
+      const trackBoost = video.textTracks && video.textTracks.length > 0 ? 1 : 0;
+      const score = area + readyBoost * 1_000_000 + trackBoost * 100_000;
+      if (score > bestScore) {
+        bestScore = score;
+        bestVideo = video;
+      }
+    }
+    if (!bestVideo) {
+      for (const video of videos) {
+        const rect = video.getBoundingClientRect();
+        if (rect.width > 2 && rect.height > 2) {
+          bestVideo = video;
+          break;
+        }
+      }
+    }
+    this.cachedVideo = bestVideo;
+    return bestVideo;
   }
 
   private tryTextTrackFallback(
