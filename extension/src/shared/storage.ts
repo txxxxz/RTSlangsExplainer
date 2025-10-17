@@ -6,12 +6,31 @@ export const STORAGE_KEYS = {
 type StorageAreaName = 'sync' | 'local';
 
 function hasSyncStorage(): boolean {
-  return typeof chrome !== 'undefined' && !!chrome.storage?.sync;
+  try {
+    return typeof chrome !== 'undefined' && !!chrome.storage?.sync;
+  } catch {
+    return false;
+  }
 }
 
-function fallbackToLocal<T>(keys: string | string[], callback: (value: T) => void) {
-  chrome.storage.local.get(keys, (result) => {
-    callback(result as unknown as T);
+async function safeStorageGet<T>(
+  area: 'sync' | 'local',
+  keys: string | string[]
+): Promise<{ data: T; area: StorageAreaName } | null> {
+  return new Promise((resolve) => {
+    try {
+      chrome.storage[area].get(keys, (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn(`[LinguaLens] storage.${area}.get failed:`, chrome.runtime.lastError);
+          resolve(null);
+        } else {
+          resolve({ data: result as unknown as T, area });
+        }
+      });
+    } catch (error) {
+      console.warn(`[LinguaLens] storage.${area}.get error:`, error);
+      resolve(null);
+    }
   });
 }
 
@@ -19,41 +38,58 @@ export async function storageGet<T>(
   keys: string | string[],
   preferSync = true
 ): Promise<{ data: T; area: StorageAreaName }> {
+  let result = null;
+
   if (preferSync && hasSyncStorage()) {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(keys, (result) => {
-        if (chrome.runtime.lastError) {
-          console.warn('[LinguaLens] storage.sync.get failed; falling back to local', chrome.runtime.lastError);
-          fallbackToLocal<T>(keys, (data) => resolve({ data, area: 'local' }));
-        } else {
-          resolve({ data: result as unknown as T, area: 'sync' });
-        }
-      });
-    });
+    result = await safeStorageGet<T>('sync', keys);
   }
-  return new Promise((resolve) => {
-    chrome.storage.local.get(keys, (result) => resolve({ data: result as unknown as T, area: 'local' }));
-  });
+
+  if (!result) {
+    result = await safeStorageGet<T>('local', keys);
+  }
+
+  if (!result) {
+    console.warn('[LinguaLens] All storage attempts failed, returning empty data');
+    return { data: {} as T, area: 'local' };
+  }
+
+  return result;
 }
 
 export async function storageSet(
   items: Record<string, unknown>,
   preferSync = true
 ): Promise<StorageAreaName> {
-  if (preferSync && hasSyncStorage()) {
-    return new Promise((resolve) => {
-      chrome.storage.sync.set(items, () => {
-        if (chrome.runtime.lastError) {
-          console.warn('[LinguaLens] storage.sync.set failed; falling back to local', chrome.runtime.lastError);
-          chrome.storage.local.set(items, () => resolve('local'));
-        } else {
-          resolve('sync');
-        }
-      });
-    });
-  }
   return new Promise((resolve) => {
-    chrome.storage.local.set(items, () => resolve('local'));
+    const setInArea = (area: 'sync' | 'local') => {
+      try {
+        chrome.storage[area].set(items, () => {
+          if (chrome.runtime.lastError) {
+            console.warn(`[LinguaLens] storage.${area}.set failed:`, chrome.runtime.lastError);
+            if (area === 'sync') {
+              setInArea('local');
+            } else {
+              resolve('local');
+            }
+          } else {
+            resolve(area);
+          }
+        });
+      } catch (error) {
+        console.warn(`[LinguaLens] storage.${area}.set error:`, error);
+        if (area === 'sync') {
+          setInArea('local');
+        } else {
+          resolve('local');
+        }
+      }
+    };
+
+    if (preferSync && hasSyncStorage()) {
+      setInArea('sync');
+    } else {
+      setInArea('local');
+    }
   });
 }
 

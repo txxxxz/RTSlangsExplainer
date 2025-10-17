@@ -5,6 +5,21 @@ interface OpenAIQuickBody {
   input: string;
   temperature: number;
   max_output_tokens: number;
+  text: {
+    format: {
+      name: 'plain_text' | 'json_schema';
+      type: 'plain_text' | 'json_schema';
+      schema?: {
+        type: 'object';
+        properties: {
+          literal: { type: 'string' };
+          context: { type: 'string' };
+        };
+        required: ['literal', 'context'];
+        additionalProperties: false;
+      };
+    };
+  };
 }
 
 export async function fetchQuickExplain(
@@ -14,18 +29,35 @@ export async function fetchQuickExplain(
   profile?: ProfileTemplate
 ): Promise<QuickExplainResponse> {
   const prompt = buildQuickPrompt(payload, profile);
+  const body: OpenAIQuickBody = {
+    model: 'gpt-4o-mini',
+    input: prompt,
+    temperature: 0.3,
+    max_output_tokens: 360,
+    text: {
+      format: {
+        name: 'json_schema',
+        type: 'json_schema',
+        schema: {
+          type: 'object',
+          properties: {
+            literal: { type: 'string' },
+            context: { type: 'string' }
+          },
+          required: ['literal', 'context'],
+          additionalProperties: false
+        }
+      }
+    }
+  };
+
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/responses`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${apiKey}`
     },
-    body: JSON.stringify(<OpenAIQuickBody>{
-      model: 'gpt-4o-mini',
-      input: prompt,
-      temperature: 0.3,
-      max_output_tokens: 360
-    })
+    body: JSON.stringify(body)
   });
 
   if (!response.ok) {
@@ -82,6 +114,17 @@ function extractOutputText(data: unknown): string {
   if (!data) return '';
   if (typeof data === 'string') return data;
 
+  // 先尝试获取结构化JSON输出
+  const outputs = (data as any)?.output ?? [];
+  for (const o of outputs) {
+    for (const c of o?.content ?? []) {
+      if (c?.type === 'json' && c?.json) {
+        return JSON.stringify(c.json); // 直接返回结构化对象的JSON字符串
+      }
+    }
+  }
+
+  // 尝试获取output_text
   const outputText = (data as { output_text?: unknown }).output_text;
   if (typeof outputText === 'string') return outputText;
   if (Array.isArray(outputText)) {

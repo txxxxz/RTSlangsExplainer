@@ -13,7 +13,7 @@ import { getActiveProfile } from './profileStore';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry';
 import { normalizeProfileTemplate } from '../shared/profile';
 
-const SERVER_BASE = 'http://localhost:8787';
+const SERVER_BASE = 'http://127.0.0.1:8000';
 
 export async function handleBackgroundMessage(
   message: BackgroundMessage,
