@@ -1,5 +1,5 @@
-import React from 'react';
-import type { QuickExplainResponse } from '../../shared/types';
+import * as React from 'react';
+import type { QuickExplainResponse } from '../../shared/types.js';
 
 interface QuickExplainBubbleProps {
   anchorText: string;
@@ -23,7 +23,12 @@ export const QuickExplainBubble: React.FC<QuickExplainBubbleProps> = ({
       <header>
         <span>LinguaLens Quick Explain</span>
         <div className="actions">
-          <button type="button" className="primary" onClick={onDeepExplain} disabled={loading}>
+          <button 
+            type="button" 
+            className="primary" 
+            onClick={onDeepExplain} 
+            disabled={loading || !response || !!error}
+          >
             Deep Explain
           </button>
           {onClose && (
@@ -44,10 +49,10 @@ export const QuickExplainBubble: React.FC<QuickExplainBubbleProps> = ({
         {!loading && error && <p className="status error">Quick Explain unavailable: {error}</p>}
         {!loading && response && (
           <>
-            <p className="literal">
+            <p className="literal meaning">
               <strong>Literal:</strong> {response.literal}
             </p>
-            <p className="context">
+            <p className="context meaning">
               <strong>Context:</strong> {response.context}
             </p>
           </>

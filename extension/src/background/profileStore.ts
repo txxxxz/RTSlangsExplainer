@@ -1,6 +1,6 @@
-import type { ProfileTemplate } from '../shared/types';
-import { STORAGE_KEYS, storageGet } from '../shared/storage';
-import { normalizeProfileTemplate } from '../shared/profile';
+import type { ProfileTemplate } from '../shared/types.js';
+import { STORAGE_KEYS, storageGet } from '../shared/storage.js';
+import { normalizeProfileTemplate } from '../shared/profile.js';
 
 export async function getActiveProfile(): Promise<ProfileTemplate | null> {
   const { data } = await storageGet<Record<string, ProfileTemplate>>([STORAGE_KEYS.activeProfile]);

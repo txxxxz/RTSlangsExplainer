@@ -66,8 +66,11 @@ export async function fetchQuickExplain(
   }
 
   const data = await response.json();
+  console.info('[LinguaLens][OpenAI] 快速解释原始响应', data);
   const rawOutput = extractOutputText(data);
+  console.info('[LinguaLens][OpenAI] 提取到的原始文本', rawOutput);
   const [literal, context] = parseQuickResponse(rawOutput);
+  console.info('[LinguaLens][OpenAI] 解析后的结果', { literal, context });
   const ttl = 1000 * 60 * 30; // 30 minutes
   return {
     requestId: payload.requestId,

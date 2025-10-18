@@ -1,5 +1,5 @@
-import type { BackgroundMessage } from '../shared/messages';
-import { handleBackgroundMessage } from './router';
+import type { BackgroundMessage } from '../shared/messages.js';
+import { handleBackgroundMessage } from './router.js';
 
 chrome.runtime.onMessage.addListener(
   (message: BackgroundMessage, sender, sendResponse) => {

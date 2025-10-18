@@ -1,7 +1,7 @@
-import { readRecord, trimRecords, writeRecord } from '../shared/indexedDb';
-import type { DeepExplainResponse, QuickExplainResponse } from '../shared/types';
-import { computeCacheKey } from '../shared/utils';
-import { getCacheSettings } from './cachePolicy';
+import { readRecord, trimRecords, writeRecord } from '../shared/indexedDb.js';
+import type { DeepExplainResponse, QuickExplainResponse } from '../shared/types.js';
+import { computeCacheKey } from '../shared/utils.js';
+import { getCacheSettings } from './cachePolicy.js';
 
 export async function readQuickFromCache(text: string, profileId?: string) {
   const key = computeCacheKey(text, profileId);

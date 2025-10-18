@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import type { ProfileTemplate } from '../shared/types';
-import { DEFAULT_PROFILE_TONE } from '../shared/profile';
+import type { ProfileTemplate } from '../shared/types.js';
+import { DEFAULT_PROFILE_TONE } from '../shared/profile.js';
 
 interface ProfileFormProps {
   profiles: ProfileTemplate[];

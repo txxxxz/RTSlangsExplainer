@@ -1,5 +1,5 @@
-import { DEFAULT_OPENAI_API_KEY, DEFAULT_OPENAI_BASE_URL } from '../shared/config';
-import { STORAGE_KEYS, storageGet, storageSet } from '../shared/storage';
+import { DEFAULT_OPENAI_API_KEY, DEFAULT_OPENAI_BASE_URL } from '../shared/config.js';
+import { STORAGE_KEYS, storageGet, storageSet } from '../shared/storage.js';
 
 interface ApiKeys {
   openaiKey?: string;

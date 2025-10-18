@@ -1,6 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { ContentMessage } from '../shared/messages';
+import type { BackgroundMessage, ContentMessage } from '../shared/messages';
 import type { DeepExplainResponse, QuickExplainResponse } from '../shared/types';
 import { createRequestId, safeParseLanguage } from '../shared/utils';
 import { SubtitleDetector, type SubtitleObservation } from './subtitleDetector';
@@ -17,6 +17,10 @@ type BridgePayload = {
   type: typeof BRIDGE_EVENT;
   observation: SubtitleObservation;
 };
+
+type QuickExplainResult =
+  | { ok: true; response: QuickExplainResponse; cached: boolean }
+  | { ok: false; error?: string };
 
 function adjustRectForParent(rect: SubtitleObservation['rect'] | undefined) {
   if (!rect) return rect;
@@ -91,6 +95,33 @@ function sendMessageSafe(
   });
 }
 
+async function requestQuickExplain(
+  payload: BackgroundMessage & { type: 'EXPLAIN_REQUEST' }['payload']
+): Promise<QuickExplainResult> {
+  const runtime = typeof chrome !== 'undefined' ? chrome.runtime : undefined;
+  if (!runtime || typeof runtime.sendMessage !== 'function') {
+    return { ok: false, error: 'Extension runtime unavailable' };
+  }
+  try {
+    const result = (await runtime.sendMessage({ type: 'EXPLAIN_REQUEST', payload })) as
+      | (QuickExplainResult & { cached?: boolean; response?: QuickExplainResponse })
+      | undefined;
+    if (result && 'ok' in result) {
+      if (result.ok && result.response) {
+        return { ok: true, response: result.response, cached: Boolean(result.cached) };
+      }
+      return { ok: false, error: result.error };
+    }
+    return { ok: false, error: 'Empty response from background' };
+  } catch (error) {
+    if (isExtensionContextInvalid(error)) {
+      return { ok: false, error: 'Extension context invalidated' };
+    }
+    console.error('[LinguaLens] Quick explain request failed', error);
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
   startSubtitleRelay();
 } else {
@@ -117,6 +148,7 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
     const [deepData, setDeepData] = useState<Partial<DeepExplainResponse> | undefined>(undefined);
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [lastRequestId, setLastRequestId] = useState<string | null>(null);
+    const lastRequestIdRef = useRef<string | null>(null);
     const [triggerVisible, setTriggerVisible] = useState(false);
     const [bubbleVisible, setBubbleVisible] = useState(false);
     const [triggerPosition, setTriggerPosition] =
@@ -141,6 +173,10 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
       (observation: SubtitleObservation) => {
         setCurrentLine(observation.text);
         setSurrounding(observation.surrounding);
+        console.info('[LinguaLens][Content] 捕获字幕', {
+          字幕文本: observation.text,
+          上下文: observation.surrounding ?? null
+        });
         setDrawerOpen(false);
         setBubbleVisible(false);
         setTriggerVisible(true);
@@ -184,19 +220,20 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
     useEffect(() => {
       function handleMessage(message: ContentMessage) {
         switch (message.type) {
-          case 'QUICK_EXPLAIN_READY':
-            if (message.payload.requestId !== lastRequestId) return;
-            setQuickResponse(message.payload);
-            setQuickLoading(false);
-            setQuickError(null);
-            break;
           case 'DEEP_EXPLAIN_READY':
             if (message.payload.requestId !== lastRequestId) return;
+            console.info('[LinguaLens][Content] 收到深度解释最终结果', {
+              请求编号: message.payload.requestId
+            });
             setDeepData(message.payload);
             setDeepLoading(false);
             break;
           case 'DEEP_EXPLAIN_PROGRESS':
             if (message.payload.requestId !== lastRequestId) return;
+            console.info('[LinguaLens][Content] 收到深度解释进度片段', {
+              请求编号: message.payload.requestId,
+              包含背景: Boolean(message.payload.background)
+            });
             setDeepData((prev) => ({ ...(prev ?? {}), ...message.payload }));
             break;
           case 'REQUEST_FAILED':
@@ -225,6 +262,10 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
     );
 
     useEffect(() => {
+      lastRequestIdRef.current = lastRequestId;
+    }, [lastRequestId]);
+
+    useEffect(() => {
       if (typeof window === 'undefined') return;
       const handleResize = () => {
         if (lastRect) {
@@ -239,6 +280,9 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
 
     function handleTriggerClick() {
       if (!currentLine) return;
+      console.info('[LinguaLens][Content] 用户点击快速解释按钮', {
+        字幕文本: currentLine
+      });
       setTriggerVisible(false);
       setBubbleVisible(true);
       triggerQuickExplain(currentLine, surrounding);
@@ -251,26 +295,63 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
       setQuickError(null);
     }
 
-    function triggerQuickExplain(text: string, context?: string) {
+    async function triggerQuickExplain(text: string, context?: string) {
       const requestId = createRequestId();
       setLastRequestId(requestId);
       setQuickLoading(true);
       setDeepData(undefined);
       setQuickResponse(undefined);
-      sendMessageSafe(
-        {
-          type: 'EXPLAIN_REQUEST',
-          payload: {
-            requestId,
-            subtitleText: text,
-            surrounding: context,
-            timestamp: Date.now(),
-            mode: 'quick',
-            languages
-          }
-        },
-        'quick-explain'
-      );
+      setQuickError(null);
+      console.info('[LinguaLens][Content] 正在请求快速解释', {
+        请求编号: requestId,
+        字幕文本: text,
+        上下文: context ?? null
+      });
+      try {
+        const result = await requestQuickExplain({
+          requestId,
+          subtitleText: text,
+          surrounding: context,
+          timestamp: Date.now(),
+          mode: 'quick',
+          languages
+        });
+        if (lastRequestIdRef.current !== requestId) {
+          return;
+        }
+        if (result.ok) {
+          setQuickResponse(result.response);
+          setQuickError(null);
+          console.info('[LinguaLens][Content] 快速解释返回成功', {
+            请求编号: requestId,
+            直译预览: result.response.literal,
+            背景字数: result.response.context.length
+          });
+        } else {
+          setQuickError(result.error ?? 'Unknown error');
+          console.info('[LinguaLens][Content] 快速解释返回失败', {
+            请求编号: requestId,
+            错误原因: result.error ?? 'Unknown error'
+          });
+        }
+      } catch (error) {
+        if (lastRequestIdRef.current !== requestId) {
+          return;
+        }
+        const reason = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+        setQuickError(reason);
+        console.info('[LinguaLens][Content] 快速解释请求异常', {
+          请求编号: requestId,
+          错误原因: reason
+        });
+      } finally {
+        if (lastRequestIdRef.current === requestId) {
+          setQuickLoading(false);
+          console.info('[LinguaLens][Content] 快速解释加载状态结束', {
+            请求编号: requestId
+          });
+        }
+      }
     }
 
     function triggerDeepExplain() {
@@ -280,6 +361,10 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
       setDeepLoading(true);
       setDeepData((prev) => ({ ...(prev ?? {}), requestId }));
       setDrawerOpen(true);
+      console.info('[LinguaLens][Content] 用户请求深度解释', {
+        请求编号: requestId,
+        字幕文本: currentLine
+      });
       sendMessageSafe(
         {
           type: 'EXPLAIN_REQUEST',

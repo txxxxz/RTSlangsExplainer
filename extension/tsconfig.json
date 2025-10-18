@@ -2,14 +2,16 @@
   "compilerOptions": {
     "target": "ES2021",
     "lib": ["DOM", "DOM.Iterable", "ES2021"],
-    "module": "ESNext",
+    "module": "NodeNext",
     "skipLibCheck": true,
     "strict": true,
     "esModuleInterop": true,
     "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "jsx": "react-jsx",
+    "jsx": "react",
+    "jsxFactory": "React.createElement",
+    "jsxFragmentFactory": "React.Fragment",
     "noEmit": true,
     "types": ["chrome", "node"]
   },

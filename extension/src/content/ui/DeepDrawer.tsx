@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import type { DeepExplainResponse } from '../../shared/types';
+import * as React from 'react';
+const { useEffect, useMemo, useState } = React;
+import type { DeepExplainResponse } from '../../shared/types.js';
 
 const TAB_KEYS = ['Background', 'Cross-culture', 'Sources'] as const;
 type TabKey = (typeof TAB_KEYS)[number];

@@ -2,7 +2,7 @@ import {
   CACHE_SETTINGS_KEY,
   DEFAULT_CACHE_SETTINGS,
   type CacheSettings
-} from '../shared/cacheSettings';
+} from '../shared/cacheSettings.js';
 
 let cachedSettings: CacheSettings = DEFAULT_CACHE_SETTINGS;
 let hasLoaded = false;

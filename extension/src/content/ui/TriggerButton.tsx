@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 
 interface TriggerButtonProps {
   visible: boolean;
@@ -22,9 +22,13 @@ export const TriggerButton: React.FC<TriggerButtonProps> = ({
 
   const fallbackLeft = typeof window !== 'undefined' ? window.innerWidth / 2 - 24 : 0;
   const fallbackTop = typeof window !== 'undefined' ? window.innerHeight - 180 : 0;
+  const scrollTop = typeof window !== 'undefined' ? window.scrollY : 0;
+  const scrollLeft = typeof window !== 'undefined' ? window.scrollX : 0;
   const style: React.CSSProperties = {
-    left: position?.left ?? fallbackLeft,
-    top: position?.top ?? fallbackTop
+    left: (position?.left ?? fallbackLeft) + scrollLeft,
+    top: (position?.top ?? fallbackTop) + scrollTop,
+    opacity: disabled ? 0.5 : 1,
+    cursor: disabled ? 'not-allowed' : 'pointer'
   };
 
   return (

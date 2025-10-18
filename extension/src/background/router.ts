@@ -1,30 +1,39 @@
-import type { BackgroundMessage } from '../shared/messages';
-import type { DeepExplainResponse, DeepExplainPartial, ProfileTemplate } from '../shared/types';
-import { fetchQuickExplain } from '../shared/openai';
+import type { BackgroundMessage } from '../shared/messages.js';
+import type {
+  DeepExplainResponse,
+  DeepExplainPartial,
+  ExplainRequestPayload,
+  ProfileTemplate
+} from '../shared/types.js';
+import { fetchQuickExplain } from '../shared/openai.js';
 import {
   readDeepFromCache,
   readQuickFromCache,
   writeDeepToCache,
   writeQuickToCache
-} from './cache';
-import { DEFAULT_OPENAI_BASE_URL } from '../shared/config';
-import { getApiKeys, saveApiKeys } from './keyStore';
-import { getActiveProfile } from './profileStore';
-import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry';
-import { normalizeProfileTemplate } from '../shared/profile';
+} from './cache.js';
+import { DEFAULT_OPENAI_BASE_URL } from '../shared/config.js';
+import { getApiKeys, saveApiKeys } from './keyStore.js';
+import { getActiveProfile } from './profileStore.js';
+import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry.js';
+import { normalizeProfileTemplate } from '../shared/profile.js';
 
 const SERVER_BASE = 'http://127.0.0.1:8000';
+
+console.info('[LinguaLens][SW] 后台路由初始化完成');
 
 export async function handleBackgroundMessage(
   message: BackgroundMessage,
   sender: chrome.runtime.MessageSender
 ) {
   switch (message.type) {
-    case 'EXPLAIN_REQUEST':
-      if (message.payload.mode === 'quick') {
-        return processQuickExplain(message.payload, sender);
+    case 'EXPLAIN_REQUEST': {
+      const explainMessage = message as Extract<BackgroundMessage, { type: 'EXPLAIN_REQUEST' }>;
+      if (explainMessage.payload.mode === 'quick') {
+        return processQuickExplain(explainMessage.payload, sender);
       }
-      return processDeepExplain(message.payload, sender);
+      return processDeepExplain(explainMessage.payload, sender);
+    }
     case 'STORE_API_KEYS':
       await saveApiKeys(message.payload);
       return { ok: true };
@@ -40,11 +49,15 @@ export async function handleBackgroundMessage(
 }
 
 async function processQuickExplain(
-  payload: BackgroundMessage & { type: 'EXPLAIN_REQUEST' }['payload'],
-  sender: chrome.runtime.MessageSender
+  payload: ExplainRequestPayload,
+  _sender: chrome.runtime.MessageSender
 ) {
-  if (!sender.tab?.id) return { ok: false };
   recordQuickRequestStart(payload.requestId);
+  console.info('[LinguaLens][SW] 收到快速解释请求', {
+    请求编号: payload.requestId,
+    字幕内容: payload.subtitleText,
+    Profile编号: payload.profileId ?? null
+  });
   const activeProfile = await getActiveProfile();
   const profileId = payload.profileId ?? activeProfile?.id;
   const effectivePayload = {
@@ -54,19 +67,28 @@ async function processQuickExplain(
   };
   const cacheHit = await readQuickFromCache(effectivePayload.subtitleText, profileId);
   if (cacheHit) {
-    await emitToTab(sender.tab.id, {
-      type: 'QUICK_EXPLAIN_READY',
-      payload: cacheHit
+    console.info('[LinguaLens][SW] 快速解释命中缓存', {
+      请求编号: payload.requestId,
+      Profile编号: profileId ?? null
     });
     await recordQuickRequestEnd(payload.requestId, { status: 'success', fromCache: true });
-    return { ok: true, cached: true };
+    console.info('[LinguaLens][SW] 返回缓存快速解释结果', {
+      请求编号: payload.requestId
+    });
+    return { ok: true, cached: true, response: cacheHit };
   }
   const { openaiKey, openaiBaseUrl } = await getApiKeys();
   if (!openaiKey) {
-    await emitFailure(sender.tab.id, payload.requestId, payload.mode, 'Missing OpenAI API key');
+    console.info('[LinguaLens][SW] 缺少 OpenAI 密钥，无法生成快速解释', {
+      请求编号: payload.requestId
+    });
     await recordQuickRequestEnd(payload.requestId, { status: 'failure', fromCache: false });
-    return { ok: false, error: 'missing_key' };
+    return { ok: false, error: 'Missing OpenAI API key' };
   }
+  console.info('[LinguaLens][SW] 缓存未命中，准备调用 OpenAI', {
+    请求编号: payload.requestId,
+    Profile编号: profileId ?? null
+  });
   try {
     const response = await fetchQuickExplain(
       effectivePayload,
@@ -74,26 +96,44 @@ async function processQuickExplain(
       openaiBaseUrl || DEFAULT_OPENAI_BASE_URL,
       activeProfile ?? undefined
     );
+    console.info('[LinguaLens][SW] OpenAI 返回快速解释', {
+      请求编号: payload.requestId,
+      直译预览: response.literal.slice(0, 40),
+      背景字数: response.context.length
+    });
     await writeQuickToCache(effectivePayload.subtitleText, response, profileId);
-    await emitToTab(sender.tab.id, {
-      type: 'QUICK_EXPLAIN_READY',
-      payload: response
+    console.info('[LinguaLens][SW] 已写入快速缓存', {
+      请求编号: payload.requestId,
+      Profile编号: profileId ?? null
     });
     await recordQuickRequestEnd(payload.requestId, { status: 'success', fromCache: false });
-    return { ok: true, cached: false };
+    console.info('[LinguaLens][SW] 返回实时快速解释结果', {
+      请求编号: payload.requestId
+    });
+    return { ok: true, cached: false, response };
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error';
-    await emitFailure(sender.tab.id, payload.requestId, payload.mode, reason);
+    console.info('[LinguaLens][SW] OpenAI 调用失败', {
+      请求编号: payload.requestId,
+      错误原因: reason
+    });
     await recordQuickRequestEnd(payload.requestId, { status: 'failure', fromCache: false });
+    console.info('[LinguaLens][SW] 返回快速解释错误结果', {
+      请求编号: payload.requestId
+    });
     return { ok: false, error: reason };
   }
 }
 
 async function processDeepExplain(
-  payload: BackgroundMessage & { type: 'EXPLAIN_REQUEST' }['payload'],
+  payload: ExplainRequestPayload,
   sender: chrome.runtime.MessageSender
 ) {
   if (!sender.tab?.id) return { ok: false };
+  console.info('[LinguaLens][SW] 收到深度解释请求', {
+    请求编号: payload.requestId,
+    字幕内容: payload.subtitleText
+  });
   const activeProfile = await getActiveProfile();
   const profileId = payload.profileId ?? activeProfile?.id;
   const effectivePayload = {
@@ -116,27 +156,54 @@ async function processDeepExplain(
   };
   const cacheHit = await readDeepFromCache(effectivePayload.subtitleText, profileId);
   if (cacheHit) {
+    console.info('[LinguaLens][SW] 深度解释命中缓存', {
+      请求编号: payload.requestId,
+      Profile编号: profileId ?? null
+    });
     await emitToTab(sender.tab.id, {
       type: 'DEEP_EXPLAIN_READY',
       payload: cacheHit
     });
+    console.info('[LinguaLens][SW] 已发送缓存深度解释结果', {
+      请求编号: payload.requestId
+    });
     return { ok: true, cached: true };
   }
   try {
+    console.info('[LinguaLens][SW] 深度解释缓存未命中，开始流式请求', {
+      请求编号: payload.requestId
+    });
     const response = await streamDeepExplain(requestPayload, sender.tab.id);
+    console.info('[LinguaLens][SW] 深度解释生成完成', {
+      请求编号: payload.requestId
+    });
     await writeDeepToCache(effectivePayload.subtitleText, response, profileId);
+    console.info('[LinguaLens][SW] 深度解释已写入缓存', {
+      请求编号: payload.requestId
+    });
     return { ok: true, cached: false };
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'Unknown error';
+    console.info('[LinguaLens][SW] 深度解释失败', {
+      请求编号: payload.requestId,
+      错误原因: reason
+    });
     await emitFailure(sender.tab.id, payload.requestId, payload.mode, reason);
+    console.info('[LinguaLens][SW] 返回深度解释错误结果', {
+      请求编号: payload.requestId
+    });
     return { ok: false, error: reason };
   }
 }
 
 async function streamDeepExplain(
-  payload: BackgroundMessage & { type: 'EXPLAIN_REQUEST' }['payload'],
+  payload: ExplainRequestPayload,
   tabId: number
 ): Promise<DeepExplainResponse> {
+  console.info('[LinguaLens][SW] 向服务器发送深度解释请求', {
+    请求编号: payload.requestId,
+    目标地址: `${SERVER_BASE}/explain/deep`
+  });
   const response = await fetch(`${SERVER_BASE}/explain/deep`, {
     method: 'POST',
     headers: {
@@ -145,6 +212,11 @@ async function streamDeepExplain(
     body: JSON.stringify(payload)
   });
   if (!response.ok) {
+    console.info('[LinguaLens][SW] 深度解释接口返回错误状态', {
+      请求编号: payload.requestId,
+      状态码: response.status,
+      状态描述: response.statusText
+    });
     throw new Error(`Deep explain failed: ${response.statusText}`);
   }
   if (!response.body) {
@@ -162,6 +234,10 @@ async function streamDeepExplain(
     buffer += decoder.decode(value, { stream: true });
     buffer = await processSseBuffer(buffer, tabId, payload.requestId, (partial) => {
       finalResult = partial as DeepExplainResponse;
+      console.info('[LinguaLens][SW] 深度解释收到流式片段', {
+        请求编号: payload.requestId,
+        包含背景段落: Boolean((partial as DeepExplainResponse).background)
+      });
     });
   }
 
@@ -171,6 +247,9 @@ async function streamDeepExplain(
   await emitToTab(tabId, {
     type: 'DEEP_EXPLAIN_READY',
     payload: finalResult
+  });
+  console.info('[LinguaLens][SW] 深度解释结果已发送到页面', {
+    请求编号: payload.requestId
   });
   return finalResult;
 }
@@ -219,6 +298,11 @@ async function handleSseEvent(
 
   const parsed = JSON.parse(dataRaw) as DeepExplainPartial | DeepExplainResponse;
 
+  console.info('[LinguaLens][SW] 解析深度解释事件', {
+    请求编号: requestId,
+    事件类型: eventType
+  });
+
   if (eventType === 'complete') {
     onComplete(parsed as DeepExplainResponse);
     return;
@@ -229,8 +313,8 @@ async function handleSseEvent(
   }
 
   const progressPayload: DeepExplainPartial = {
-    requestId,
-    ...parsed
+    ...parsed,
+    requestId
   };
 
   await emitToTab(tabId, {
@@ -281,12 +365,22 @@ async function deleteProfile(profileId: string) {
 }
 
 async function emitToTab(tabId: number, message: { type: string; payload: unknown }) {
+  console.info('[LinguaLens][SW] 向内容脚本发送消息', {
+    标签页: tabId,
+    消息类型: message.type
+  });
   return new Promise<void>((resolve) => {
     chrome.tabs.sendMessage(tabId, message, () => resolve());
   });
 }
 
 async function emitFailure(tabId: number, requestId: string, mode: string, reason: string) {
+  console.info('[LinguaLens][SW] 通知前端请求失败', {
+    标签页: tabId,
+    请求编号: requestId,
+    模式: mode,
+    错误原因: reason
+  });
   return emitToTab(tabId, {
     type: 'REQUEST_FAILED',
     payload: {

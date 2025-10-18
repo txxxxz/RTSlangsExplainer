@@ -3,8 +3,7 @@ import type {
   DeepExplainResponse,
   ExplainMode,
   ExplainRequestPayload,
-  ProfileTemplate,
-  QuickExplainResponse
+  ProfileTemplate
 } from './types';
 
 export type BackgroundMessage =
@@ -29,10 +28,6 @@ export type BackgroundMessage =
     };
 
 export type ContentMessage =
-  | {
-      type: 'QUICK_EXPLAIN_READY';
-      payload: QuickExplainResponse;
-    }
   | {
       type: 'DEEP_EXPLAIN_READY';
       payload: DeepExplainResponse;
