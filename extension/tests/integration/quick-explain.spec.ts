@@ -22,15 +22,22 @@ const crossCulture = [
   {
     profileId: 'p-default',
     profileName: 'Default Profile',
+    headline: 'Default profile insight',
     analogy: 'Cross culture snippet',
     confidence: 'medium',
     notes: 'Tailored for the active profile.'
   }
 ];
 
+const backgroundSection = {
+  summary: 'Background section streamed',
+  detail: 'Additional background context for testing.',
+  highlights: ['First highlight', 'Second highlight']
+};
+
 const deepProgress = {
   requestId: 'test-request',
-  background: 'Background section streamed',
+  background: backgroundSection,
   crossCulture,
   sources: [
     {
@@ -44,11 +51,10 @@ const deepProgress = {
 
 const deepComplete = {
   requestId: 'test-request',
-  background: 'Background section streamed',
+  background: backgroundSection,
   crossCulture,
   sources: deepProgress.sources,
-  confidence: 'high',
-  confidenceNotes: 'High agreement between knowledge sources.',
+  confidence: { level: 'high', notes: 'High agreement between knowledge sources.' },
   generatedAt: Date.now()
 };
 

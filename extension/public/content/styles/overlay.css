@@ -201,6 +201,30 @@
   color: #b91c1c;
 }
 
+.lingualens-drawer .background .detail {
+  margin-top: 8px;
+  color: #1e293b;
+}
+
+.lingualens-drawer .background .highlights {
+  margin: 12px 0 0 18px;
+  padding: 0;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lingualens-drawer .cross-culture .headline {
+  font-weight: 600;
+  margin: 4px 0;
+}
+
+.lingualens-drawer .cross-culture .context {
+  color: #475569;
+  font-size: 13px;
+}
+
 .lingualens-drawer .background .note,
 .lingualens-drawer .cross-culture-block .note {
   margin-top: 8px;

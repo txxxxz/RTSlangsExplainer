@@ -16,8 +16,9 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
   const [tab, setTab] = useState<TabKey>('Background');
   const sources = data?.sources ?? [];
   const crossCulture = data?.crossCulture ?? [];
-  const overallConfidence = data?.confidence;
-  const confidenceNotes = data?.confidenceNotes;
+  const background = data?.background;
+  const overallConfidence = data?.confidence?.level;
+  const confidenceNotes = data?.confidence?.notes;
   const reasoningNotes = data?.reasoningNotes;
 
   useEffect(() => {
@@ -32,10 +33,25 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
     }
     switch (tab) {
       case 'Background':
+        if (!background) {
+          return (
+            <div className="background">
+              <p className="paragraph">{loading ? 'Background loading…' : 'No background available.'}</p>
+            </div>
+          );
+        }
         return (
           <div className="background">
-            <p className="paragraph">{data.background ?? 'Background loading…'}</p>
-            {reasoningNotes && <p className="note">Why it matters: {reasoningNotes}</p>}
+            <p className="paragraph">{normalizeField(background.summary)}</p>
+            {background.detail && <p className="paragraph detail">{normalizeField(background.detail)}</p>}
+            {!!background.highlights?.length && (
+              <ul className="highlights">
+                {background.highlights.map((point, index) => (
+                  <li key={index}>{normalizeField(point)}</li>
+                ))}
+              </ul>
+            )}
+            {reasoningNotes && <p className="note">Why it matters: {normalizeField(reasoningNotes)}</p>}
           </div>
         );
       case 'Cross-culture':
@@ -59,11 +75,13 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
               {crossCulture.map((insight) => (
                 <li key={insight.profileId}>
                   <div className="entry-header">
-                    <span className="profile-name">{insight.profileName}</span>
-                    <span className={`badge badge-${insight.confidence}`}>{insight.confidence}</span>
+                    <span className="profile-name">{normalizeField(insight.profileName)}</span>
+                    <span className={`badge badge-${insight.confidence}`}>{normalizeField(insight.confidence)}</span>
                   </div>
-                  <p>{insight.analogy}</p>
-                  {insight.notes && <p className="note">{insight.notes}</p>}
+                  {insight.headline && <p className="headline">{normalizeField(insight.headline)}</p>}
+                  <p>{normalizeField(insight.analogy)}</p>
+                  {insight.context && <p className="context">{normalizeField(insight.context)}</p>}
+                  {insight.notes && <p className="note">{normalizeField(insight.notes)}</p>}
                 </li>
               ))}
             </ul>
@@ -82,18 +100,18 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
             {overallConfidence && (
               <p className="confidence">
                 Overall confidence{' '}
-                <span className={`badge badge-${overallConfidence}`}>{overallConfidence}</span>
-                {confidenceNotes ? ` — ${confidenceNotes}` : ''}
+                <span className={`badge badge-${overallConfidence}`}>{normalizeField(overallConfidence)}</span>
+                {confidenceNotes ? ` — ${normalizeField(confidenceNotes)}` : ''}
               </p>
             )}
             <ul className="sources">
               {sources.map((source) => (
                 <li key={source.url || source.title}>
                   <a href={source.url} target="_blank" rel="noreferrer">
-                    {source.title}
+                    {normalizeField(source.title)}
                   </a>
-                  <span className={`badge badge-${source.credibility}`}>{source.credibility}</span>
-                  {source.excerpt && <p>{source.excerpt}</p>}
+                  <span className={`badge badge-${source.credibility}`}>{normalizeField(source.credibility)}</span>
+                  {source.excerpt && <p>{normalizeField(source.excerpt)}</p>}
                 </li>
               ))}
             </ul>
@@ -132,3 +150,37 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
     </div>
   );
 };
+function normalizeField(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    try {
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        const parsed = JSON.parse(trimmed);
+        if (typeof parsed === 'string') {
+          return parsed;
+        }
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => normalizeField(item)).filter(Boolean).join('；');
+        }
+        if (parsed && typeof parsed === 'object') {
+          return Object.entries(parsed)
+            .map(([key, val]) => `${key}: ${normalizeField(val)}`)
+            .join('；');
+        }
+      }
+    } catch {
+      // ignore parse errors, fall back to raw string
+    }
+    return trimmed;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => normalizeField(item)).filter(Boolean).join('；');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, val]) => `${key}: ${normalizeField(val)}`)
+      .join('；');
+  }
+  return String(value);
+}

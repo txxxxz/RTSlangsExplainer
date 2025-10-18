@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import AsyncGenerator
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from ..core.config import get_settings
@@ -22,14 +22,30 @@ from ..services.rag import RagRetriever, documents_to_sources
 router = APIRouter(prefix='/explain', tags=['explain'])
 
 
+def _extract_openai_credentials(req: Request) -> tuple[str | None, str | None]:
+    key = req.headers.get('x-openai-key')
+    if not key:
+        key = req.headers.get('X-OpenAI-Key')
+    if key:
+        key = key.strip()
+    auth_header = req.headers.get('authorization') or req.headers.get('Authorization')
+    if (not key) and auth_header and auth_header.lower().startswith('bearer '):
+        key = auth_header[7:].strip()
+    base_url = req.headers.get('x-openai-base') or req.headers.get('X-OpenAI-Base')
+    if base_url:
+        base_url = base_url.strip()
+    return key or None, base_url or None
+
+
 @router.post('/quick', response_model=QuickExplainResponse)
-async def post_quick_explain(request: ExplainRequest) -> QuickExplainResponse:
+async def post_quick_explain(request: ExplainRequest, http_request: Request) -> QuickExplainResponse:
     cache = await ExplainCache.create()
     cached = await cache.get_quick(request.subtitleText, request.profileId)
     if cached:
         return QuickExplainResponse.model_validate(cached)
 
-    client = await OpenAIClient.create()
+    api_key, base_url = _extract_openai_credentials(http_request)
+    client = await OpenAIClient.create(api_key=api_key, base_url=base_url)
     try:
         response = await client.quick_explain(request)
     finally:
@@ -43,7 +59,7 @@ def _sse(event: str, data: dict) -> bytes:
 
 
 @router.post('/deep')
-async def post_deep_explain(request: ExplainRequest) -> StreamingResponse:
+async def post_deep_explain(request: ExplainRequest, http_request: Request) -> StreamingResponse:
     cache = await ExplainCache.create()
     cached = await cache.get_deep(request.subtitleText, request.profileId)
     if cached:
@@ -52,14 +68,13 @@ async def post_deep_explain(request: ExplainRequest) -> StreamingResponse:
         async def replay_cached() -> AsyncGenerator[bytes, None]:
             yield _sse('background', {
                 'requestId': cached_response.requestId,
-                'background': cached_response.background,
+                'background': cached_response.background.model_dump(),
                 'reasoningNotes': cached_response.reasoningNotes
             })
             yield _sse('crossCulture', {
                 'requestId': cached_response.requestId,
                 'crossCulture': [item.model_dump() for item in cached_response.crossCulture],
-                'confidence': cached_response.confidence,
-                'confidenceNotes': cached_response.confidenceNotes,
+                'confidence': cached_response.confidence.model_dump(),
                 'reasoningNotes': cached_response.reasoningNotes
             })
             yield _sse('sources', {
@@ -73,6 +88,8 @@ async def post_deep_explain(request: ExplainRequest) -> StreamingResponse:
             media_type='text/event-stream',
             headers={'Cache-Control': 'no-cache'}
         )
+
+    api_key, base_url = _extract_openai_credentials(http_request)
 
     knowledge_sections = []
     rag_sources = []
@@ -120,7 +137,7 @@ async def post_deep_explain(request: ExplainRequest) -> StreamingResponse:
                     'sources': [source.model_dump() for source in merged_sources]
                 })
 
-            client = await OpenAIClient.create()
+            client = await OpenAIClient.create(api_key=api_key, base_url=base_url)
             try:
                 response = await client.deep_explain(request, knowledge_base, merged_sources)
             finally:
@@ -134,14 +151,13 @@ async def post_deep_explain(request: ExplainRequest) -> StreamingResponse:
 
             yield _sse('background', {
                 'requestId': response.requestId,
-                'background': response.background,
+                'background': response.background.model_dump(),
                 'reasoningNotes': response.reasoningNotes
             })
             yield _sse('crossCulture', {
                 'requestId': response.requestId,
                 'crossCulture': [item.model_dump() for item in response.crossCulture],
-                'confidence': response.confidence,
-                'confidenceNotes': response.confidenceNotes,
+                'confidence': response.confidence.model_dump(),
                 'reasoningNotes': response.reasoningNotes
             })
             yield _sse('complete', response.model_dump())

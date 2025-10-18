@@ -4,6 +4,8 @@ from typing import Literal, Sequence
 
 from pydantic import BaseModel, Field
 
+from .profile import ProfileTemplate
+
 
 class LanguagePair(BaseModel):
     primary: str = Field(..., description="User's primary language code.")
@@ -29,6 +31,17 @@ class SourceReference(BaseModel):
     excerpt: str | None = None
 
 
+class DeepBackground(BaseModel):
+    summary: str
+    detail: str | None = None
+    highlights: list[str] = Field(default_factory=list)
+
+
+class DeepConfidence(BaseModel):
+    level: Literal['high', 'medium', 'low']
+    notes: str | None = None
+
+
 class QuickExplainResponse(BaseModel):
     requestId: str
     literal: str
@@ -38,24 +51,25 @@ class QuickExplainResponse(BaseModel):
     expiresAt: int
 
 
-class DeepExplainResponse(BaseModel):
-    requestId: str
-    background: str
-    crossCulture: Sequence['CrossCultureInsight']
-    sources: Sequence[SourceReference]
-    confidence: Literal['high', 'medium', 'low']
-    confidenceNotes: str | None = None
-    reasoningNotes: str | None = None
-    profileId: str | None = None
-    generatedAt: int
-
-
 class CrossCultureInsight(BaseModel):
     profileId: str
     profileName: str
     analogy: str
     confidence: Literal['high', 'medium', 'low']
     notes: str | None = None
+    headline: str | None = None
+    context: str | None = None
+
+
+class DeepExplainResponse(BaseModel):
+    requestId: str
+    background: DeepBackground
+    crossCulture: Sequence['CrossCultureInsight']
+    sources: Sequence[SourceReference]
+    confidence: DeepConfidence
+    reasoningNotes: str | None = None
+    profileId: str | None = None
+    generatedAt: int
 
 
 class ExplainJobStatus(BaseModel):
@@ -65,4 +79,6 @@ class ExplainJobStatus(BaseModel):
     error: str | None = None
 
 
+ExplainRequest.model_rebuild()
+CrossCultureInsight.model_rebuild()
 DeepExplainResponse.model_rebuild()

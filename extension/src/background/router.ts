@@ -204,12 +204,34 @@ async function streamDeepExplain(
     请求编号: payload.requestId,
     目标地址: `${SERVER_BASE}/explain/deep`
   });
+  console.info('[LinguaLens][SW] 深度解释请求体预览', {
+    字幕前40字符: payload.subtitleText.slice(0, 40),
+    上下文有无: Boolean(payload.surrounding),
+    变体Profile数量: payload.profiles?.length ?? 0
+  });
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json'
+  };
+  try {
+    const { openaiKey, openaiBaseUrl } = await getApiKeys();
+    if (openaiKey) {
+      headers['X-OpenAI-Key'] = openaiKey;
+    }
+    if (openaiBaseUrl) {
+      headers['X-OpenAI-Base'] = openaiBaseUrl;
+    }
+  } catch (error) {
+    console.warn('[LinguaLens][SW] 无法读取本地 OpenAI 密钥，将尝试使用服务器配置', error);
+  }
   const response = await fetch(`${SERVER_BASE}/explain/deep`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
+    headers,
     body: JSON.stringify(payload)
+  });
+  console.info('[LinguaLens][SW] 深度解释服务器响应状态', {
+    请求编号: payload.requestId,
+    状态码: response.status,
+    状态描述: response.statusText
   });
   if (!response.ok) {
     console.info('[LinguaLens][SW] 深度解释接口返回错误状态', {
@@ -232,11 +254,15 @@ async function streamDeepExplain(
     const { value, done } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
+    console.info('[LinguaLens][SW] 深度解释流片段字节数', {
+      请求编号: payload.requestId,
+      当前缓冲长度: buffer.length
+    });
     buffer = await processSseBuffer(buffer, tabId, payload.requestId, (partial) => {
       finalResult = partial as DeepExplainResponse;
       console.info('[LinguaLens][SW] 深度解释收到流式片段', {
         请求编号: payload.requestId,
-        包含背景段落: Boolean((partial as DeepExplainResponse).background)
+        包含背景段落: Boolean((partial as DeepExplainResponse).background?.summary)
       });
     });
   }
@@ -309,6 +335,10 @@ async function handleSseEvent(
   }
 
   if (eventType === 'error') {
+    console.error('[LinguaLens][SW] 深度解释流错误事件', {
+      请求编号: requestId,
+      原始数据: parsed
+    });
     throw new Error((parsed as { reason?: string }).reason ?? 'Deep explain streaming error');
   }
 

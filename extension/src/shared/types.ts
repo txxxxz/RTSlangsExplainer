@@ -9,6 +9,17 @@ export interface SourceReference {
   excerpt?: string;
 }
 
+export interface DeepBackground {
+  summary: string;
+  detail?: string;
+  highlights: string[];
+}
+
+export interface DeepConfidenceMeta {
+  level: ConfidenceLevel;
+  notes?: string;
+}
+
 export interface QuickExplainResponse {
   requestId: string;
   literal: string;
@@ -27,15 +38,16 @@ export interface CrossCultureInsight {
   analogy: string;
   confidence: ConfidenceLevel;
   notes?: string;
+  headline?: string;
+  context?: string;
 }
 
 export interface DeepExplainResponse {
   requestId: string;
-  background: string;
+  background: DeepBackground;
   crossCulture: CrossCultureInsight[];
   sources: SourceReference[];
-  confidence: ConfidenceLevel;
-  confidenceNotes?: string;
+  confidence: DeepConfidenceMeta;
   reasoningNotes?: string;
   profileId?: string;
   generatedAt: number;

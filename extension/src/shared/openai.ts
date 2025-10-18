@@ -53,6 +53,16 @@ export async function fetchQuickExplain(
     }
   };
 
+  console.info('[LinguaLens][OpenAI] 准备请求快速解释', {
+    请求地址: `${baseUrl.replace(/\/$/, '')}/responses`,
+    请求模型: body.model,
+    最大输出: body.max_output_tokens
+  });
+  console.info('[LinguaLens][OpenAI] 请求提示词预览', {
+    前120字符: prompt.slice(0, 120),
+    字符总数: prompt.length
+  });
+
   const response = await fetch(`${baseUrl.replace(/\/$/, '')}/responses`, {
     method: 'POST',
     headers: {
@@ -62,8 +72,17 @@ export async function fetchQuickExplain(
     body: JSON.stringify(body)
   });
 
+  console.info('[LinguaLens][OpenAI] 快速解释响应状态', {
+    状态码: response.status,
+    状态文本: response.statusText
+  });
+
   if (!response.ok) {
     const message = await response.text();
+    console.error('[LinguaLens][OpenAI] 快速解释请求失败', {
+      状态码: response.status,
+      原始响应: message
+    });
     throw new Error(`OpenAI request failed: ${message}`);
   }
 

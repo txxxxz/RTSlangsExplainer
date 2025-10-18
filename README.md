@@ -27,7 +27,7 @@ cd server
 # python -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload --log-level debug
 ```
 
 The server expects Redis at `redis://localhost:6379/0` and a populated Chroma/FAISS index under `./data/vector`. Use `python scripts/build_index.py data/slang.json` to ingest datasets.
