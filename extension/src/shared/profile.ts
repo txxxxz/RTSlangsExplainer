@@ -1,4 +1,4 @@
-import type { ProfileDemographics, ProfileTemplate } from './types';
+import type { ProfileDemographics, ProfileTemplate } from './types.js';
 
 export const DEFAULT_PROFILE_DEMOGRAPHICS: ProfileDemographics = {
   ageRange: 'unspecified',
@@ -7,11 +7,13 @@ export const DEFAULT_PROFILE_DEMOGRAPHICS: ProfileDemographics = {
 };
 
 export const DEFAULT_PROFILE_TONE = 'Neutral explanatory tone.';
+export const DEFAULT_PROFILE_PREFERENCE = 'Explain concepts with relatable, everyday examples.';
 
-type RawProfileTemplate = Omit<ProfileTemplate, 'demographics' | 'tone' | 'goals'> & {
+type RawProfileTemplate = Omit<ProfileTemplate, 'demographics' | 'tone' | 'goals' | 'personalPreference'> & {
   demographics?: Partial<ProfileDemographics>;
   tone?: string | null;
   goals?: string | null;
+  personalPreference?: string | null;
 };
 
 export function normalizeProfileTemplate(profile: RawProfileTemplate): ProfileTemplate {
@@ -21,10 +23,12 @@ export function normalizeProfileTemplate(profile: RawProfileTemplate): ProfileTe
   };
   const tone = profile.tone ?? DEFAULT_PROFILE_TONE;
   const goals = profile.goals ?? undefined;
+  const personalPreference = profile.personalPreference?.trim();
   return {
     ...profile,
     demographics,
     tone,
+    personalPreference: personalPreference || undefined,
     goals
   };
 }

@@ -1,4 +1,5 @@
 import type { ExplainRequestPayload, ProfileTemplate, QuickExplainResponse } from './types.js';
+import { DEFAULT_PROFILE_PREFERENCE } from './profile.js';
 
 interface OpenAIQuickBody {
   model: string;
@@ -121,6 +122,7 @@ function buildQuickPrompt(payload: ExplainRequestPayload, profile?: ProfileTempl
         `Demographics: age_range=${profile.demographics.ageRange}, region=${profile.demographics.region}, occupation=${profile.demographics.occupation}, gender=${profile.demographics.gender || 'unspecified'}`,
         `Cultural focus: ${profile.cultures.join(', ') || 'none'}`,
         `Tone preference: ${profile.tone}`,
+        `Personal preference: ${profile.personalPreference || DEFAULT_PROFILE_PREFERENCE}`,
         `Learning goals: ${profile.goals || 'none specified'}`,
         `Profile description: ${profile.description}`,
         'Adapt literal/context to resonate with the profile while staying accurate.'

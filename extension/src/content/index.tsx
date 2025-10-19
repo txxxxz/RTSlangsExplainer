@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import type { BackgroundMessage, ContentMessage } from '../shared/messages.js';
-import type { DeepExplainResponse, QuickExplainResponse } from '../shared/types.js';
+import type { DeepExplainResponse, HistoryEntry, QuickExplainResponse } from '../shared/types.js';
 import { createRequestId, safeParseLanguage } from '../shared/utils.js';
 import { SubtitleDetector, type SubtitleObservation } from './subtitleDetector.js';
 import { DeepDrawer } from './ui/DeepDrawer.js';
 import { QuickExplainBubble } from './ui/QuickExplainBubble.js';
 import { TriggerButton } from './ui/TriggerButton.js';
+import { getStorageAdapter } from '../shared/storageAdapter.js';
 
 const BRIDGE_EVENT = 'LINGUALENS_SUBTITLE';
 const RUNTIME_AVAILABLE = typeof chrome !== 'undefined' && !!chrome.runtime?.id;
@@ -154,6 +155,9 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
     const [triggerPosition, setTriggerPosition] =
       useState<{ left: number; top: number } | null>(null);
     const [lastRect, setLastRect] = useState<SubtitleObservation['rect'] | null>(null);
+    const storageAdapter = useMemo(() => getStorageAdapter(), []);
+    const historyStoredRequestIds = useRef<Set<string>>(new Set());
+    const historyRequestMeta = useRef<Map<string, { query: string }>>(new Map());
 
     const computeTriggerPosition = useCallback(
       (rect?: SubtitleObservation['rect']): { left: number; top: number } | null => {
@@ -225,16 +229,18 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
             if (message.payload.requestId !== lastRequestId) return;
             setDeepData((prev) => ({ ...(prev ?? {}), ...message.payload }));
             break;
-          case 'REQUEST_FAILED':
-            if (message.payload.requestId !== lastRequestId) return;
-            if (message.payload.mode === 'quick') setQuickLoading(false);
-            if (message.payload.mode === 'deep') setDeepLoading(false);
-            if (message.payload.mode === 'quick') setQuickError(message.payload.reason ?? 'Unknown error');
-            console.warn('[LinguaLens] Request failed', message.payload.reason);
-            break;
-          default:
-            break;
-        }
+      case 'REQUEST_FAILED':
+        if (message.payload.requestId !== lastRequestId) return;
+        if (message.payload.mode === 'quick') setQuickLoading(false);
+        if (message.payload.mode === 'deep') setDeepLoading(false);
+        if (message.payload.mode === 'quick') setQuickError(message.payload.reason ?? 'Unknown error');
+        console.warn('[LinguaLens] Request failed', message.payload.reason);
+        historyRequestMeta.current.delete(message.payload.requestId);
+        historyStoredRequestIds.current.delete(message.payload.requestId);
+        break;
+      default:
+        break;
+    }
       }
       chrome.runtime.onMessage.addListener(handleMessage);
       return () => {
@@ -326,6 +332,7 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
       setDeepLoading(true);
       setDeepData((prev) => ({ ...(prev ?? {}), requestId }));
       setDrawerOpen(true);
+      historyRequestMeta.current.set(requestId, { query: currentLine });
       sendMessageSafe(
         {
           type: 'EXPLAIN_REQUEST',
@@ -341,6 +348,39 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
         'deep-explain'
       );
     }
+
+    useEffect(() => {
+      const requestId = deepData?.requestId;
+      if (!requestId) return;
+      if (!deepData?.background?.summary) return;
+      if (!deepData.generatedAt) return;
+      if (historyStoredRequestIds.current.has(requestId)) return;
+      historyStoredRequestIds.current.add(requestId);
+      const metadata = historyRequestMeta.current.get(requestId);
+      const queryText = metadata?.query ?? currentLine;
+      const entry: HistoryEntry = {
+        id: requestId,
+        query: queryText,
+        resultSummary: deepData.background.summary,
+        profileId: deepData.profileId,
+        createdAt: deepData.generatedAt ?? Date.now(),
+        deepResponse: deepData as DeepExplainResponse
+      };
+      void (async () => {
+        try {
+          if (entry.profileId) {
+            const profiles = await storageAdapter.getProfiles();
+            const matched = profiles.find((profile) => profile.id === entry.profileId);
+            entry.profileName = matched?.name;
+          }
+          await storageAdapter.saveHistory(entry);
+        } catch (error) {
+          console.warn('[LinguaLens] Failed to persist history entry', error);
+        } finally {
+          historyRequestMeta.current.delete(requestId);
+        }
+      })();
+    }, [currentLine, deepData, storageAdapter]);
 
     return (
       <>

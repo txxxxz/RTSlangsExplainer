@@ -89,11 +89,13 @@ export const App: React.FC = () => {
   }
 
   async function handleUpsertProfile(profile: ProfileTemplate) {
-    await sendMessage({
+    const savedProfile = await sendMessage<ProfileTemplate>({
       type: 'UPSERT_PROFILE',
       payload: profile
     });
+    const normalized = normalizeProfileTemplate(savedProfile);
     await refreshProfiles();
+    return normalized;
   }
 
   async function handleDeleteProfile(id: string) {
@@ -131,6 +133,7 @@ export const App: React.FC = () => {
             onSave={handleUpsertProfile}
             onDelete={handleDeleteProfile}
             onSetActive={handleSetActiveProfile}
+            onRefreshProfiles={refreshProfiles}
           />
         )}
       </section>

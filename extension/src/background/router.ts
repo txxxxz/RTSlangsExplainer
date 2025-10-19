@@ -17,6 +17,7 @@ import { getApiKeys, saveApiKeys } from './keyStore.js';
 import { getActiveProfile } from './profileStore.js';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry.js';
 import { normalizeProfileTemplate } from '../shared/profile.js';
+import { getStorageAdapter } from '../shared/storageAdapter.js';
 
 const SERVER_BASE = 'http://127.0.0.1:8000';
 
@@ -354,46 +355,23 @@ async function handleSseEvent(
 }
 
 async function fetchProfiles(): Promise<{ profiles: ProfileTemplate[] }> {
-  const response = await fetch(`${SERVER_BASE}/profiles`, {
-    method: 'GET'
-  });
-  if (!response.ok) {
-    throw new Error('Failed to fetch profiles');
-  }
-  const payload = await response.json();
-  const profiles = Array.isArray(payload?.profiles)
-    ? payload.profiles.map((profile: ProfileTemplate) => normalizeProfileTemplate(profile))
-    : [];
-  return { profiles };
+  const adapter = getStorageAdapter();
+  const profiles = await adapter.getProfiles();
+  return { profiles: profiles.map((profile) => normalizeProfileTemplate(profile)) };
 }
 
 async function upsertProfile(profile: ProfileTemplate) {
+  const adapter = getStorageAdapter();
   const normalized = normalizeProfileTemplate(profile);
-  const response = await fetch(`${SERVER_BASE}/profiles`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(normalized)
-  });
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || 'Failed to upsert profile');
-  }
-  const payload = await response.json();
-  return normalizeProfileTemplate(payload);
+  const saved = await adapter.saveProfile(normalized);
+  return normalizeProfileTemplate(saved);
 }
 
 async function deleteProfile(profileId: string) {
-  const response = await fetch(`${SERVER_BASE}/profiles/${profileId}`, {
-    method: 'DELETE'
-  });
-  if (!response.ok) {
-    throw new Error('Failed to delete profile');
-  }
+  const adapter = getStorageAdapter();
+  await adapter.deleteProfile(profileId);
   return { ok: true };
 }
-
 async function emitToTab(tabId: number, message: { type: string; payload: unknown }) {
   console.info('[LinguaLens][SW] 向内容脚本发送消息', {
     标签页: tabId,

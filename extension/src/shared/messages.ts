@@ -4,7 +4,7 @@ import type {
   ExplainMode,
   ExplainRequestPayload,
   ProfileTemplate
-} from './types';
+} from './types.js';
 
 export type BackgroundMessage =
   | {

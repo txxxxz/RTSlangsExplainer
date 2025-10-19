@@ -82,6 +82,7 @@ export interface ProfileTemplate {
   primaryLanguage: string;
   cultures: string[];
   demographics: ProfileDemographics;
+  personalPreference?: string;
   tone: string;
   goals?: string;
   createdAt: number;
@@ -99,3 +100,49 @@ export interface CachedExplainRecord {
 export type DeepExplainPartial = Partial<DeepExplainResponse> & {
   requestId: string;
 };
+
+export type ModelProvider =
+  | 'openai'
+  | 'azure-openai'
+  | 'anthropic'
+  | 'google-gemini'
+  | 'deepseek'
+  | 'self-hosted';
+
+export interface ModelQualitySettings {
+  temperature: number;
+  topP: number;
+  maxTokens: number;
+  formality: 'formal' | 'informal';
+  literalness: number;
+  glossaryEnabled: boolean;
+}
+
+export interface ModelConfig extends ModelQualitySettings {
+  id: string;
+  provider: ModelProvider;
+  model: string;
+  baseUrl?: string;
+  apiKey?: string;
+  isDefault?: boolean;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface HistoryEntry {
+  id: string;
+  query: string;
+  resultSummary?: string;
+  profileId?: string;
+  profileName?: string;
+  deepResponse?: DeepExplainResponse;
+  createdAt: number;
+}
+
+export interface LinguaLensSettings {
+  defaultModelId?: string;
+  theme?: 'system' | 'light' | 'dark';
+  glossaryEnabledByDefault?: boolean;
+  syncMode?: 'local' | 'cloud';
+  updatedAt: number;
+}

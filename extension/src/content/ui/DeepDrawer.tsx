@@ -1,6 +1,7 @@
 import * as React from 'react';
 const { useEffect, useMemo, useState } = React;
 import type { DeepExplainResponse } from '../../shared/types.js';
+import { SettingsModal } from './SettingsModal.js';
 
 const TAB_KEYS = ['Background', 'Cross-culture', 'Sources'] as const;
 type TabKey = (typeof TAB_KEYS)[number];
@@ -14,6 +15,7 @@ interface DeepDrawerProps {
 
 export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onClose }) => {
   const [tab, setTab] = useState<TabKey>('Background');
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const sources = data?.sources ?? [];
   const crossCulture = data?.crossCulture ?? [];
   const background = data?.background;
@@ -24,6 +26,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
   useEffect(() => {
     if (open) {
       setTab('Background');
+      setSettingsOpen(false);
     }
   }, [open]);
 
@@ -66,8 +69,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
           <div className="cross-culture-block">
             {overallConfidence && (
               <p className="confidence">
-                Overall confidence{' '}
-                <span className={`badge badge-${overallConfidence}`}>{overallConfidence}</span>
+                Overall confidence <span className={`badge badge-${overallConfidence}`}>{overallConfidence}</span>
                 {confidenceNotes ? ` — ${confidenceNotes}` : ''}
               </p>
             )}
@@ -99,8 +101,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
           <div className="sources-block">
             {overallConfidence && (
               <p className="confidence">
-                Overall confidence{' '}
-                <span className={`badge badge-${overallConfidence}`}>{normalizeField(overallConfidence)}</span>
+                Overall confidence <span className={`badge badge-${overallConfidence}`}>{normalizeField(overallConfidence)}</span>
                 {confidenceNotes ? ` — ${normalizeField(confidenceNotes)}` : ''}
               </p>
             )}
@@ -120,7 +121,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
       default:
         return null;
     }
-  }, [confidenceNotes, crossCulture, data, loading, overallConfidence, reasoningNotes, sources, tab]);
+  }, [background, confidenceNotes, crossCulture, data, loading, overallConfidence, reasoningNotes, sources, tab]);
 
   if (!open) return null;
 
@@ -142,20 +143,28 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
           >
             {key}
           </button>
-      ))}
+        ))}
       </nav>
-      <section>
-        {content}
-      </section>
+      <section>{content}</section>
+      <footer>
+        <button type="button" className="profile-button" onClick={() => setSettingsOpen(true)}>
+          Settings ⚙️
+        </button>
+      </footer>
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 };
+
 function normalizeField(value: unknown): string {
   if (value == null) return '';
   if (typeof value === 'string') {
     const trimmed = value.trim();
     try {
-      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+      if (
+        (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+        (trimmed.startsWith('[') && trimmed.endsWith(']'))
+      ) {
         const parsed = JSON.parse(trimmed);
         if (typeof parsed === 'string') {
           return parsed;
