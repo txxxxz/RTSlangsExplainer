@@ -17,8 +17,7 @@ import { getApiKeys, saveApiKeys } from './keyStore.js';
 import { getActiveProfile } from './profileStore.js';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry.js';
 import { normalizeProfileTemplate } from '../shared/profile.js';
-
-const SERVER_BASE = 'http://127.0.0.1:8000';
+import { SERVER_BASE } from '../shared/server.js';
 
 console.info('[LinguaLens][SW] 后台路由初始化完成');
 

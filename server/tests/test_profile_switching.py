@@ -1,23 +1,16 @@
 import pytest
+from pathlib import Path
 
 from app.schemas.profile import ProfileTemplate
 from app.services.profiles import ProfileStore
-
-
-class FakeCacheClient:
-    def __init__(self):
-        self.value = None
-
-    async def get_json(self, key: str):
-        return self.value
-
-    async def set_json(self, key: str, value: str, ttl: int | None):
-        self.value = value
+from app.services.profile_repository import ProfileRepository
 
 
 @pytest.mark.asyncio
-async def test_profile_store_upsert_and_delete():
-    store = ProfileStore(FakeCacheClient())  # type: ignore[arg-type]
+async def test_profile_store_upsert_and_delete(tmp_path: Path):
+    db_path = tmp_path / 'profiles.db'
+    repository = ProfileRepository(db_path=db_path)
+    store = ProfileStore(repository)
 
     profile_a = ProfileTemplate(
         id='a',
@@ -30,6 +23,7 @@ async def test_profile_store_upsert_and_delete():
             'region': 'US',
             'occupation': 'Student'
         },
+        personalPreference='Use playful analogies and princess metaphors.',
         tone='Casual comparisons with sports references.',
         createdAt=1,
         updatedAt=1
@@ -46,6 +40,7 @@ async def test_profile_store_upsert_and_delete():
             'occupation': 'Engineer',
             'gender': 'F'
         },
+        personalPreference='Keep explanations precise with historical nods.',
         tone='Direct tone with historical context.',
         createdAt=1,
         updatedAt=1
@@ -63,8 +58,10 @@ async def test_profile_store_upsert_and_delete():
 
 
 @pytest.mark.asyncio
-async def test_profile_store_limits_to_three_profiles():
-    store = ProfileStore(FakeCacheClient())  # type: ignore[arg-type]
+async def test_profile_store_limits_to_three_profiles(tmp_path: Path):
+    db_path = tmp_path / 'profiles.db'
+    repository = ProfileRepository(db_path=db_path)
+    store = ProfileStore(repository)
 
     for idx in range(3):
         await store.upsert(
@@ -79,6 +76,7 @@ async def test_profile_store_limits_to_three_profiles():
                     'region': 'US',
                     'occupation': 'Student'
                 },
+                personalPreference='Explain with clear classroom examples.',
                 tone='Neutral tone.',
                 createdAt=idx,
                 updatedAt=idx
@@ -98,6 +96,7 @@ async def test_profile_store_limits_to_three_profiles():
                     'region': 'US',
                     'occupation': 'Student'
                 },
+                personalPreference='Explain with clear classroom examples.',
                 tone='Neutral tone.',
                 createdAt=4,
                 updatedAt=4

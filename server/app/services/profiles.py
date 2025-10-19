@@ -1,48 +1,34 @@
 from __future__ import annotations
 
-import json
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
-from ..core.cache import CacheClient, get_cache
+from .profile_repository import ProfileRepository
 from ..schemas.profile import ProfileTemplate
 
-PROFILES_KEY = 'profiles::templates'
+MAX_PROFILES = 3
 
 
 class ProfileStore:
-    def __init__(self, client: CacheClient):
-        self._client = client
+    def __init__(self, repository: ProfileRepository):
+        self._repository = repository
 
     @classmethod
-    async def create(cls) -> 'ProfileStore':
-        client = await get_cache()
-        return cls(client)
+    async def create(cls, db_path: Optional[Path] = None) -> 'ProfileStore':
+        repository = ProfileRepository(db_path=db_path)
+        return cls(repository)
 
     async def list_profiles(self) -> List[ProfileTemplate]:
-        raw = await self._client.get_json(PROFILES_KEY)
-        if not raw:
-            return []
-        data = json.loads(raw)
-        return [ProfileTemplate.model_validate(item) for item in data]
+        return await self._repository.a_list_profiles()
 
-    async def save_profiles(self, profiles: List[ProfileTemplate]) -> None:
-        payload = json.dumps([profile.model_dump() for profile in profiles])
-        await self._client.set_json(PROFILES_KEY, payload, ttl=None)
-
-    async def upsert(self, profile: ProfileTemplate) -> None:
+    async def upsert(self, profile: ProfileTemplate) -> ProfileTemplate:
         profiles = await self.list_profiles()
         existing_ids = {item.id for item in profiles}
-        if profile.id in existing_ids:
-            updated = [
-                profile if item.id == profile.id else item
-                for item in profiles
-            ]
-        else:
-            if len(profiles) >= 3:
-                raise ValueError('Maximum number of profiles reached (3).')
-            updated = [*profiles, profile]
-        await self.save_profiles(updated)
+
+        if profile.id not in existing_ids and len(profiles) >= MAX_PROFILES:
+            raise ValueError(f'Maximum number of profiles reached ({MAX_PROFILES}).')
+
+        return await self._repository.a_save_profile(profile)
 
     async def delete(self, profile_id: str) -> None:
-        profiles = [profile for profile in await self.list_profiles() if profile.id != profile_id]
-        await self.save_profiles(profiles)
+        await self._repository.a_delete_profile(profile_id)

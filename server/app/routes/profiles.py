@@ -12,15 +12,23 @@ async def list_profiles() -> ProfileCollection:
     profiles = await store.list_profiles()
     return ProfileCollection(profiles=profiles)
 
+@router.post('', response_model=ProfileTemplate)
+async def create_profile(profile: ProfileTemplate) -> ProfileTemplate:
+    store = await ProfileStore.create()
+    try:
+        saved = await store.upsert(profile)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    return saved
 
 @router.put('', response_model=ProfileTemplate)
 async def upsert_profile(profile: ProfileTemplate) -> ProfileTemplate:
     store = await ProfileStore.create()
     try:
-        await store.upsert(profile)
+        saved = await store.upsert(profile)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
-    return profile
+    return saved
 
 
 @router.delete('/{profile_id}')

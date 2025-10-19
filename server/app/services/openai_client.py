@@ -17,6 +17,8 @@ from ..schemas.explain import (
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PROFILE_PREFERENCE = 'Explain concepts with relatable, everyday examples.'
+
 
 def _quick_text_format() -> dict[str, Any]:
     return {
@@ -247,6 +249,7 @@ class OpenAIClient:
                 f"Cultural focus: {', '.join(request.profile.cultures) or 'none'}",
                 f"Demographics: age_range={demographics.ageRange}, region={demographics.region}, occupation={demographics.occupation}, gender={demographics.gender or 'unspecified'}",
                 f"Tone preference: {request.profile.tone}",
+                f"Personal preference: {request.profile.personalPreference or DEFAULT_PROFILE_PREFERENCE}",
                 f"Learning goals: {request.profile.goals or 'none specified'}",
                 f"Description: {request.profile.description}",
                 'Adjust literal/context to resonate with the profile while staying accurate and concise.'
@@ -283,7 +286,7 @@ class OpenAIClient:
         for profile in variant_profiles:
             demographics = profile.demographics
             profile_sections.append(
-                f"- {profile.id}: {profile.name}; demographics(age_range={demographics.ageRange}, region={demographics.region}, occupation={demographics.occupation}, gender={demographics.gender or 'unspecified'}); tone={profile.tone}; goals={profile.goals or 'none'}; cultures={', '.join(profile.cultures) or 'none'}; description={profile.description}"
+                f"- {profile.id}: {profile.name}; demographics(age_range={demographics.ageRange}, region={demographics.region}, occupation={demographics.occupation}, gender={demographics.gender or 'unspecified'}); tone={profile.tone}; persona={profile.personalPreference or DEFAULT_PROFILE_PREFERENCE}; goals={profile.goals or 'none'}; cultures={', '.join(profile.cultures) or 'none'}; description={profile.description}"
             )
         schema_instructions = [
             'Return JSON with the following schema (no markdown fences, no prose outside the JSON object):',

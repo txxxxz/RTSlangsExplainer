@@ -5,6 +5,12 @@ import type { ModelConfig, ModelProvider } from '../../../shared/types.js';
 import { STORAGE_KEYS, storageRemove } from '../../../shared/storage.js';
 import { DEFAULT_OPENAI_BASE_URL } from '../../../shared/config.js';
 import type { ToastHandler } from '../SettingsModal.js';
+import {
+  deleteModelConfig as deleteModelConfigApi,
+  fetchModelConfigs,
+  saveModelConfig as saveModelConfigApi,
+  setDefaultModel as setDefaultModelApi
+} from '../../../shared/api/models.js';
 
 interface ModelsTabProps {
   onNotify: ToastHandler;
@@ -63,13 +69,18 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ onNotify }) => {
   const [saving, setSaving] = useState(false);
 
   const refreshModels = useCallback(async () => {
-    const list = await adapter.getModelConfigs();
-    setModels(list);
-    if (list.length && !list.find((model) => model.id === form.id)) {
-      const defaultModel = list.find((model) => model.isDefault) ?? list[0];
-      setForm(buildFormState(defaultModel));
+    try {
+      const list = await fetchModelConfigs();
+      setModels(list);
+      if (list.length && !list.find((model) => model.id === form.id)) {
+        const defaultModel = list.find((model) => model.isDefault) ?? list[0];
+        setForm(buildFormState(defaultModel));
+      }
+    } catch (error) {
+      console.error('[LinguaLens] Failed to fetch model configs', error);
+      onNotify('error', 'Failed to load model configurations');
     }
-  }, [adapter, form.id]);
+  }, [form.id, onNotify]);
 
   useEffect(() => {
     void refreshModels();
@@ -98,10 +109,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ onNotify }) => {
           createdAt: existing?.createdAt ?? Date.now(),
           updatedAt: Date.now()
         };
-        const saved = await adapter.saveModelConfig(payload);
-        if (form.isDefault) {
-          await adapter.setDefaultModel(saved.id);
-        }
+        const saved = await saveModelConfigApi(payload);
         setForm(buildFormState(saved));
         await refreshModels();
         onNotify('success', 'Model configuration saved');
@@ -112,7 +120,7 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ onNotify }) => {
         setSaving(false);
       }
     },
-    [adapter, form, models, onNotify, refreshModels]
+    [form, models, onNotify, refreshModels]
   );
 
   const handleEdit = useCallback((id: string) => {
@@ -125,24 +133,24 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ onNotify }) => {
 
   const handleDelete = useCallback(
     async (id: string) => {
-      await adapter.deleteModelConfig(id);
+      await deleteModelConfigApi(id);
       if (form.id === id) {
         resetForm();
       }
       await refreshModels();
       onNotify('success', 'Model configuration deleted');
     },
-    [adapter, form.id, onNotify, refreshModels, resetForm]
+    [form.id, onNotify, refreshModels, resetForm]
   );
 
   const handleSetDefault = useCallback(
     async (id: string) => {
-      await adapter.setDefaultModel(id);
+      await setDefaultModelApi(id);
       await refreshModels();
       setForm((prev) => (prev.id === id ? { ...prev, isDefault: true } : prev));
       onNotify('success', 'Default model updated');
     },
-    [adapter, onNotify, refreshModels]
+    [onNotify, refreshModels]
   );
 
   const handleTestConnection = useCallback(async () => {
@@ -169,6 +177,14 @@ export const ModelsTab: React.FC<ModelsTabProps> = ({ onNotify }) => {
   const handleResetAll = useCallback(async () => {
     if (!window.confirm('This will erase profiles, history, and model configs. Continue?')) {
       return;
+    }
+    try {
+      const remoteModels = await fetchModelConfigs();
+      if (remoteModels.length) {
+        await Promise.all(remoteModels.map((model) => deleteModelConfigApi(model.id)));
+      }
+    } catch (error) {
+      console.warn('[LinguaLens] Failed to clear remote model configs during reset', error);
     }
     await adapter.resetAll();
     await storageRemove([STORAGE_KEYS.activeProfile, STORAGE_KEYS.apiKeys]);

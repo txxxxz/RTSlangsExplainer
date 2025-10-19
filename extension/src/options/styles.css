@@ -103,6 +103,13 @@ button.danger {
   margin: 0 0 12px;
 }
 
+.profile-form__error {
+  margin: 0 0 12px;
+  color: #dc2626;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .profile-summary__secondary {
   background: transparent;
   border: none;

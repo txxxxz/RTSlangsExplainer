@@ -15,6 +15,7 @@ class ProfileTemplate(BaseModel):
     primaryLanguage: str
     cultures: list[str]
     demographics: ProfileDemographics = Field(default_factory=ProfileDemographics)
+    personalPreference: str | None = Field(default=None)
     tone: str = Field(default='Neutral explanatory tone.')
     goals: str | None = Field(default=None)
     createdAt: int

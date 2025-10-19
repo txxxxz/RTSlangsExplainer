@@ -15,9 +15,14 @@ class CacheClient:
     @classmethod
     async def create(cls) -> 'CacheClient':
         settings = get_settings()
-        client = redis.from_url(settings.redis_url, decode_responses=True)
-        await client.ping()
-        return cls(client)
+        try:
+            client = redis.from_url(settings.redis_url, decode_responses=True)
+            await client.ping()
+            print(f"Successfully connected to Redis at {settings.redis_url}")
+            return cls(client)
+        except Exception as e:
+            print(f"Failed to connect to Redis: {e}")
+            raise
 
     async def close(self) -> None:
         await self._client.close()

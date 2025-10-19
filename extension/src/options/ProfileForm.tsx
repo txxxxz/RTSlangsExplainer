@@ -48,6 +48,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [lastSavedProfileId, setLastSavedProfileId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [successContext, setSuccessContext] = useState<'created' | 'view'>('created');
+  const [formError, setFormError] = useState<string | null>(null);
 
   const AGE_RANGE_OPTIONS = useMemo(
     () => ['Under 10', '10-18', '18-25', '26-35', '36-45', '46-55', '56+', 'Prefer not to say'],
@@ -157,6 +158,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setGoals(profile.goals ?? '');
     setPersonalPreference(profile.personalPreference ?? '');
     setViewMode('form');
+    setFormError(null);
   };
 
   const startNewProfile = () => {
@@ -164,6 +166,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setViewMode('form');
     setSelectedProfileId(null);
     setLastSavedProfileId(null);
+    setFormError(null);
   };
 
   useEffect(() => {
@@ -187,18 +190,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log('表单提交开始');
     if (!name.trim()) {
-      console.log('名称为空，取消提交');
+      setFormError('Profile title is required.');
       return;
     }
     if (!canSubmit) {
-      console.log('无法提交（达到最大数量或其他限制）');
       return;
     }
-    console.log('表单数据验证通过，准备提交');
 
     try {
+      setFormError(null);
       const now = Date.now();
       const cultureTags = cultures
         .split(',')
@@ -229,13 +230,10 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         updatedAt: now
       };
 
-      console.log('正在保存 profile:', profilePayload);
       const savedProfile = await onSave(profilePayload);
-      console.log('保存完成，返回数据:', savedProfile);
 
       const shouldActivate = !isEditing || editingProfileId === activeProfileId;
       if (shouldActivate) {
-        console.log('设置为活动 profile');
         await onSetActive(savedProfile || profilePayload);
       }
 
@@ -255,6 +253,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     if (onRefreshProfiles) {
       void onRefreshProfiles();
     }
+    setFormError(null);
   };
 
   const handleBackToExplain = () => {
@@ -263,6 +262,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     }
     setViewMode('list');
     setSelectedProfileId(null);
+    setFormError(null);
   };
 
   const handleSelectProfileCard = (profile: ProfileTemplate) => {
@@ -277,6 +277,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setSelectedProfileId(profile.id);
     setLastSavedProfileId(profile.id);
     setSuccessContext('view');
+    setFormError(null);
     setViewMode('success');
   };
 
@@ -301,13 +302,20 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       <p className="profile-form__hint">
         You can save up to {MAX_PROFILES} profiles. Currently {profiles.length}/{MAX_PROFILES} used.
       </p>
+      {formError && <p className="profile-form__error" role="alert">{formError}</p>}
 
       <label htmlFor="profileName">Profile Name</label>
       <input
         id="profileName"
         value={name}
-        onChange={(event) => setName(event.target.value)}
+        onChange={(event) => {
+          if (formError) {
+            setFormError(null);
+          }
+          setName(event.target.value);
+        }}
         placeholder="Comedy Night Learner"
+        required
       />
 
       <label htmlFor="profileDescription">Description</label>
