@@ -17,7 +17,6 @@ import { getApiKeys, saveApiKeys } from './keyStore.js';
 import { getActiveProfile } from './profileStore.js';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry.js';
 import { normalizeProfileTemplate } from '../shared/profile.js';
-import { getStorageAdapter } from '../shared/storageAdapter.js';
 
 const SERVER_BASE = 'http://127.0.0.1:8000';
 
@@ -355,21 +354,53 @@ async function handleSseEvent(
 }
 
 async function fetchProfiles(): Promise<{ profiles: ProfileTemplate[] }> {
-  const adapter = getStorageAdapter();
-  const profiles = await adapter.getProfiles();
-  return { profiles: profiles.map((profile) => normalizeProfileTemplate(profile)) };
+  const response = await fetch(`${SERVER_BASE}/profiles`, {
+    method: 'GET'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to fetch profiles');
+  }
+  const payload = await response.json();
+  const profiles = Array.isArray(payload?.profiles)
+    ? payload.profiles.map((profile: ProfileTemplate) => normalizeProfileTemplate(profile))
+    : [];
+  return { profiles };
 }
 
 async function upsertProfile(profile: ProfileTemplate) {
-  const adapter = getStorageAdapter();
+  console.log('后台脚本收到 upsert 请求:', profile);
   const normalized = normalizeProfileTemplate(profile);
-  const saved = await adapter.saveProfile(normalized);
-  return normalizeProfileTemplate(saved);
+  console.log('准备发送到服务器的数据:', normalized);
+  try {
+    const response = await fetch(`${SERVER_BASE}/profiles`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(normalized)
+    });
+    console.log('服务器响应状态:', response.status, response.statusText);
+    if (!response.ok) {
+      const message = await response.text();
+      console.error('服务器返回错误:', message);
+      throw new Error(message || 'Failed to upsert profile');
+    }
+    const payload = await response.json();
+    console.log('服务器返回数据:', payload);
+    return normalizeProfileTemplate(payload);
+  } catch (error) {
+    console.error('发送请求到服务器时出错:', error);
+    throw error;
+  }
 }
 
 async function deleteProfile(profileId: string) {
-  const adapter = getStorageAdapter();
-  await adapter.deleteProfile(profileId);
+  const response = await fetch(`${SERVER_BASE}/profiles/${profileId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete profile');
+  }
   return { ok: true };
 }
 async function emitToTab(tabId: number, message: { type: string; payload: unknown }) {

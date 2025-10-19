@@ -47,6 +47,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   const [lastSavedProfileId, setLastSavedProfileId] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+  const [successContext, setSuccessContext] = useState<'created' | 'view'>('created');
 
   const AGE_RANGE_OPTIONS = useMemo(
     () => ['Under 10', '10-18', '18-25', '26-35', '36-45', '46-55', '56+', 'Prefer not to say'],
@@ -186,49 +187,66 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name.trim()) return;
-    if (!canSubmit) return;
-    const now = Date.now();
-    const cultureTags = cultures
-      .split(',')
-      .map((culture) => culture.trim())
-      .filter(Boolean);
-
-    const demographics = {
-      ageRange: ageRange.trim(),
-      region: region.trim(),
-      occupation: occupation.trim(),
-      gender: gender.trim() || undefined
-    };
-
-    const id = editingProfileId ?? crypto.randomUUID();
-    const createdAt = editingCreatedAt ?? now;
-
-    const profilePayload: ProfileTemplate = {
-      id,
-      name: name.trim(),
-      description: description.trim(),
-      primaryLanguage: primaryLanguage.trim(),
-      cultures: cultureTags,
-      demographics,
-      personalPreference: personalPreference.trim() || undefined,
-      tone: tone.trim(),
-      goals: goals.trim() || undefined,
-      createdAt,
-      updatedAt: now
-    };
-
-    const savedProfile = (await onSave(profilePayload)) ?? profilePayload;
-
-    const shouldActivate = !isEditing || editingProfileId === activeProfileId;
-    if (shouldActivate) {
-      await onSetActive(savedProfile);
+    console.log('表单提交开始');
+    if (!name.trim()) {
+      console.log('名称为空，取消提交');
+      return;
     }
+    if (!canSubmit) {
+      console.log('无法提交（达到最大数量或其他限制）');
+      return;
+    }
+    console.log('表单数据验证通过，准备提交');
 
-    resetFormFields();
-    setLastSavedProfileId(savedProfile.id);
-    setSelectedProfileId(savedProfile.id);
-    setViewMode('success');
+    try {
+      const now = Date.now();
+      const cultureTags = cultures
+        .split(',')
+        .map((culture) => culture.trim())
+        .filter(Boolean);
+
+      const demographics = {
+        ageRange: ageRange.trim(),
+        region: region.trim(),
+        occupation: occupation.trim(),
+        gender: gender.trim() || undefined
+      };
+
+      const id = editingProfileId ?? crypto.randomUUID();
+      const createdAt = editingCreatedAt ?? now;
+
+      const profilePayload: ProfileTemplate = {
+        id,
+        name: name.trim(),
+        description: description.trim(),
+        primaryLanguage: primaryLanguage.trim(),
+        cultures: cultureTags,
+        demographics,
+        personalPreference: personalPreference.trim() || undefined,
+        tone: tone.trim(),
+        goals: goals.trim() || undefined,
+        createdAt,
+        updatedAt: now
+      };
+
+      console.log('正在保存 profile:', profilePayload);
+      const savedProfile = await onSave(profilePayload);
+      console.log('保存完成，返回数据:', savedProfile);
+
+      const shouldActivate = !isEditing || editingProfileId === activeProfileId;
+      if (shouldActivate) {
+        console.log('设置为活动 profile');
+        await onSetActive(savedProfile || profilePayload);
+      }
+
+      resetFormFields();
+      setSuccessContext('created');
+      setLastSavedProfileId((savedProfile || profilePayload).id);
+      setSelectedProfileId((savedProfile || profilePayload).id);
+      setViewMode('success');
+    } catch (error) {
+      console.error('Failed to save profile:', error);
+    }
   };
 
   const handleViewAllProfiles = () => {
@@ -242,9 +260,9 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const handleBackToExplain = () => {
     if (onReturnToExplain) {
       onReturnToExplain();
-    } else {
-      setViewMode('list');
     }
+    setViewMode('list');
+    setSelectedProfileId(null);
   };
 
   const handleSelectProfileCard = (profile: ProfileTemplate) => {
@@ -253,8 +271,12 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   };
 
   const handleViewProfile = (profile: ProfileTemplate) => {
+    if (onRefreshProfiles) {
+      void onRefreshProfiles();
+    }
     setSelectedProfileId(profile.id);
     setLastSavedProfileId(profile.id);
+    setSuccessContext('view');
     setViewMode('success');
   };
 
@@ -489,30 +511,76 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     </form>
   );
 
-  const renderSuccess = () => (
-    <div className="profile-success">
-      <h3>Add Successfully</h3>
-      <p>
-        {lastSavedProfile
-          ? `"${lastSavedProfile.name}" is now active. What would you like to do next?`
-          : 'Your profile is active and ready to use.'}
-      </p>
-      <div className="profile-success__actions">
-        <button type="button" className="primary outline" onClick={handleViewAllProfiles}>
-          All Profiles
-        </button>
-        <button type="button" className="primary" onClick={startNewProfile} disabled={!canAddProfile}>
-          Add Profile
-        </button>
-        <button type="button" className="profile-summary__secondary" onClick={handleBackToExplain}>
-          Back
-        </button>
+  const renderSuccess = () => {
+    const viewingProfile = successContext === 'view';
+    const headline = viewingProfile ? 'Profile Overview' : 'Add Successfully';
+    const summaryText = lastSavedProfile
+      ? viewingProfile
+        ? `“${lastSavedProfile.name}” profile details are ready below.`
+        : `“${lastSavedProfile.name}” is now active. Review the details below or keep exploring.`
+      : 'Your profile is active and ready to use.';
+
+    return (
+      <div className="profile-success">
+        <h3>{headline}</h3>
+        <p>{summaryText}</p>
+        {lastSavedProfile && (
+          <div className="profile-detail">
+            <h4>{lastSavedProfile.description}</h4>
+            <dl>
+              <div>
+                <dt>Primary Language</dt>
+                <dd>{lastSavedProfile.primaryLanguage}</dd>
+              </div>
+              <div>
+                <dt>Cultures</dt>
+                <dd>{lastSavedProfile.cultures.join(', ') || 'n/a'}</dd>
+              </div>
+              <div>
+                <dt>Demographics</dt>
+                <dd>
+                  {lastSavedProfile.demographics?.ageRange || 'Age n/a'} ·{' '}
+                  {lastSavedProfile.demographics?.region || 'Region n/a'} ·{' '}
+                  {lastSavedProfile.demographics?.occupation || 'Occupation n/a'}{' '}
+                  {lastSavedProfile.demographics?.gender ? `· ${lastSavedProfile.demographics.gender}` : ''}
+                </dd>
+              </div>
+              <div>
+                <dt>Tone</dt>
+                <dd>{lastSavedProfile.tone}</dd>
+              </div>
+              {lastSavedProfile.personalPreference && (
+                <div>
+                  <dt>Persona Preference</dt>
+                  <dd>{lastSavedProfile.personalPreference}</dd>
+                </div>
+              )}
+              {lastSavedProfile.goals && (
+                <div>
+                  <dt>Learning Goals</dt>
+                  <dd>{lastSavedProfile.goals}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+        )}
+        <div className="profile-success__actions">
+          <button type="button" className="primary outline" onClick={handleViewAllProfiles}>
+            All Profiles
+          </button>
+          <button type="button" className="primary" onClick={startNewProfile} disabled={!canAddProfile}>
+            Add Profile
+          </button>
+          <button type="button" className="profile-summary__secondary" onClick={handleBackToExplain}>
+            Back
+          </button>
+        </div>
+        {!canAddProfile && (
+          <p className="profile-summary__hint">Remove an existing profile before adding a new one.</p>
+        )}
       </div>
-      {!canAddProfile && (
-        <p className="profile-summary__hint">Remove an existing profile before adding a new one.</p>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderList = () => (
     <div className="profile-list">

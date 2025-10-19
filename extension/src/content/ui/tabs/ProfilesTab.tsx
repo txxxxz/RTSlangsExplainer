@@ -1,9 +1,8 @@
 import * as React from 'react';
-const { useCallback, useEffect, useMemo, useState } = React;
+const { useCallback, useEffect, useState } = React;
 import { ProfileForm } from '../../../options/ProfileForm.js';
 import { normalizeProfileTemplate } from '../../../shared/profile.js';
 import { STORAGE_KEYS, storageGet, storageRemove, storageSet } from '../../../shared/storage.js';
-import { getStorageAdapter } from '../../../shared/storageAdapter.js';
 import type { ProfileTemplate } from '../../../shared/types.js';
 import type { ToastHandler } from '../SettingsModal.js';
 
@@ -17,7 +16,26 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const adapter = useMemo(() => getStorageAdapter(), []);
+  const runtime = typeof chrome !== 'undefined' ? chrome.runtime : undefined;
+
+  const sendMessage = useCallback(
+    <T,>(message: unknown) =>
+      new Promise<T>((resolve, reject) => {
+        if (!runtime?.sendMessage) {
+          reject(new Error('Extension runtime unavailable'));
+          return;
+        }
+        runtime.sendMessage(message, (response) => {
+          const lastError = chrome.runtime.lastError;
+          if (lastError) {
+            reject(new Error(lastError.message));
+          } else {
+            resolve(response as T);
+          }
+        });
+      }),
+    [runtime]
+  );
 
   const loadActiveProfile = useCallback(async () => {
     try {
@@ -33,8 +51,10 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
     setLoading(true);
     setError(null);
     try {
-      const list = await adapter.getProfiles();
-      const normalized = list.map((profile) => normalizeProfileTemplate(profile));
+      const response = await sendMessage<{ profiles: ProfileTemplate[] }>({
+        type: 'FETCH_PROFILES'
+      });
+      const normalized = (response?.profiles ?? []).map((profile) => normalizeProfileTemplate(profile));
       setProfiles(normalized);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
@@ -44,7 +64,7 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
       setLoading(false);
       await loadActiveProfile();
     }
-  }, [adapter, loadActiveProfile, onNotify]);
+  }, [loadActiveProfile, onNotify, sendMessage]);
 
   useEffect(() => {
     void refreshProfiles();
@@ -53,12 +73,18 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
   const handleSave = useCallback(
     async (profile: ProfileTemplate) => {
       try {
-        const normalized = normalizeProfileTemplate(profile);
-        const saved = await adapter.saveProfile(normalized);
+        setStatus(null);
+        setError(null);
+        const payload = normalizeProfileTemplate(profile);
+        const savedProfile = await sendMessage<ProfileTemplate>({
+          type: 'UPSERT_PROFILE',
+          payload
+        });
+        const normalized = normalizeProfileTemplate(savedProfile ?? payload);
         await refreshProfiles();
-        setStatus('Profile saved locally');
+        setStatus('Profile saved');
         onNotify('success', 'Profile saved');
-        return saved;
+        return normalized;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
@@ -66,13 +92,18 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
         throw err;
       }
     },
-    [adapter, onNotify, refreshProfiles]
+    [onNotify, refreshProfiles, sendMessage]
   );
 
   const handleDelete = useCallback(
     async (id: string) => {
       try {
-        await adapter.deleteProfile(id);
+        setStatus(null);
+        setError(null);
+        await sendMessage({
+          type: 'DELETE_PROFILE',
+          payload: { id }
+        });
         if (id === activeProfileId) {
           await storageRemove(STORAGE_KEYS.activeProfile);
           setActiveProfileId(undefined);
@@ -86,7 +117,7 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
         onNotify('error', `Failed to delete profile: ${message}`);
       }
     },
-    [activeProfileId, adapter, onNotify, refreshProfiles]
+    [activeProfileId, onNotify, refreshProfiles, sendMessage]
   );
 
   const handleSetActive = useCallback(async (profile: ProfileTemplate) => {

@@ -89,13 +89,20 @@ export const App: React.FC = () => {
   }
 
   async function handleUpsertProfile(profile: ProfileTemplate) {
-    const savedProfile = await sendMessage<ProfileTemplate>({
-      type: 'UPSERT_PROFILE',
-      payload: profile
-    });
-    const normalized = normalizeProfileTemplate(savedProfile);
-    await refreshProfiles();
-    return normalized;
+    console.log('开始 upsert profile:', profile);
+    try {
+      const savedProfile = await sendMessage<ProfileTemplate>({
+        type: 'UPSERT_PROFILE',
+        payload: profile
+      });
+      console.log('收到后台脚本响应:', savedProfile);
+      const normalized = normalizeProfileTemplate(savedProfile);
+      await refreshProfiles();
+      return normalized;
+    } catch (error) {
+      console.error('Upsert profile 失败:', error);
+      throw error;
+    }
   }
 
   async function handleDeleteProfile(id: string) {
