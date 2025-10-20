@@ -61,6 +61,7 @@ async def delete_history_entry(entry_id: str):
     return {'ok': True}
 
 
+
 @router.get('/settings', response_model=SettingsPayload)
 async def get_settings_v1() -> SettingsPayload:
     store = await SettingsStore.create()
