@@ -9,34 +9,46 @@ body {
 }
 
 .page {
-  padding: 32px;
+  padding: 48px 40px 64px;
   max-width: 960px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
 }
 
 h1 {
-  font-size: 28px;
-  margin-bottom: 16px;
+  font-size: 32px;
+  margin: 0 0 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 section {
-  background: #fff;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  background: linear-gradient(145deg, #ffffff 0%, #f8fbff 100%);
+  border-radius: 18px;
+  padding: 28px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
 }
 
 section h2 {
-  margin-top: 0;
+  margin: 0 0 18px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0f172a;
 }
 
 label {
-  display: block;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #64748b;
+  letter-spacing: 0.08em;
+  color: #475569;
   margin-bottom: 6px;
 }
 
@@ -44,37 +56,132 @@ input,
 textarea,
 select {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid #cbd5f5;
-  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 12px;
   font-size: 14px;
   box-sizing: border-box;
-  margin-bottom: 12px;
+  margin: 0;
+  color: #0f172a;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #ffffff;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: rgba(226, 232, 240, 0.6);
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 1.5L6 6.5L10.5 1.5' stroke='%23526784' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  padding-right: 42px;
+}
+
+input[type='number'] {
+  appearance: textfield;
+}
+
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+section > form:not(.profile-form) {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 button.primary {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #fff;
   border: none;
-  padding: 10px 16px;
-  border-radius: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  box-shadow: 0 18px 32px rgba(37, 99, 235, 0.24);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+button.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 22px 36px rgba(37, 99, 235, 0.28);
+}
+
+button.primary:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 3px;
+}
+
+button.primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 button.primary.outline {
-  background: transparent;
-  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
   border: 1px solid rgba(37, 99, 235, 0.4);
+  box-shadow: none;
+}
+
+button.primary.outline:hover {
+  background: rgba(37, 99, 235, 0.14);
 }
 
 button.danger {
-  background: transparent;
+  background: rgba(239, 68, 68, 0.12);
   color: #b91c1c;
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  padding: 8px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  padding: 10px 18px;
   border-radius: 999px;
   cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+button.danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(239, 68, 68, 0.18);
 }
 
 .form-actions {
@@ -94,7 +201,41 @@ button.danger {
 .profile-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field input,
+.form-field textarea,
+.form-field select {
+  margin: 0;
+}
+
+.form-field__hint,
+.form-field__support {
+  margin: 0;
+  font-size: 12px;
+  color: #667085;
+  line-height: 1.4;
+}
+
+.form-field__support {
+  color: #4b5563;
+}
+
+.field-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.field-grid .form-field {
+  height: 100%;
 }
 
 .profile-form__hint {
@@ -118,21 +259,24 @@ button.danger {
 
 .profile-summary__secondary {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #2563eb;
   font-weight: 600;
-  padding: 8px 10px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .profile-summary__secondary:hover {
   background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.18);
 }
 
 .profile-summary__secondary:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
-  outline-offset: 2px;
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.16);
 }
 
 .profile-summary__hint {
@@ -216,19 +360,21 @@ button.danger {
 }
 
 .profile-card {
-  border: 1px solid rgba(148, 163, 184, 0.4);
-  border-radius: 16px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  border-radius: 18px;
+  padding: 18px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.95) 100%);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  gap: 10px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .profile-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  border-color: rgba(37, 99, 235, 0.28);
 }
 
 .profile-card.latest {
@@ -237,8 +383,13 @@ button.danger {
 }
 
 .profile-card.active {
-  border-color: rgba(37, 99, 235, 0.5);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+}
+
+.profile-card.active:hover {
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 24px 42px rgba(37, 99, 235, 0.2);
 }
 
 .profile-card header {
@@ -246,6 +397,13 @@ button.danger {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.profile-card header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .profile-card__description {
@@ -264,17 +422,19 @@ button.danger {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin-top: 10px;
+  align-items: center;
+  margin-top: 6px;
 }
 
 .profile-detail {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 18px;
   padding: 24px;
-  background: rgba(255, 255, 255, 0.95);
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
 }
 
 .profile-detail__header {
@@ -323,10 +483,19 @@ button.danger {
   border-radius: 999px;
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
 }
 
 .badge-active {
-  background: rgba(37, 99, 235, 0.15);
-  color: #1d4ed8;
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.45);
+}
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }

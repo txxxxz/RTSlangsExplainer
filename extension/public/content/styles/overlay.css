@@ -67,26 +67,46 @@
   background: rgba(148, 163, 184, 0.18);
 }
 
-.lingualens-settings-modal nav {
+.settings-tab-switcher {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: linear-gradient(160deg, rgba(248, 250, 252, 0.92) 0%, rgba(226, 232, 240, 0.85) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 14px 28px rgba(15, 23, 42, 0.08);
 }
 
-.lingualens-settings-modal nav button {
-  border: 1px solid rgba(148, 163, 184, 0.5);
+.settings-tab-switcher button {
+  border: none;
   background: rgba(255, 255, 255, 0.9);
-  padding: 6px 14px;
+  padding: 8px 18px;
   border-radius: 999px;
   font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #0f172a;
   cursor: pointer;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
 }
 
-.lingualens-settings-modal nav button.active {
-  background: #2563eb;
+.settings-tab-switcher button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.18);
+}
+
+.settings-tab-switcher button.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: #ffffff;
-  border-color: #2563eb;
+  box-shadow: 0 18px 36px rgba(37, 99, 235, 0.25);
+}
+
+.settings-tab-switcher button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
 }
 
 .lingualens-settings-modal section {
@@ -97,12 +117,86 @@
 
 .lingualens-settings-modal select,
 .lingualens-settings-modal input,
-.lingualens-settings-modal textarea {
+.lingualens-settings-modal textarea,
+.lingualens-drawer select,
+.lingualens-drawer input,
+.lingualens-drawer textarea {
   font-family: inherit;
   font-size: 14px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.32);
+  background: rgba(248, 250, 252, 0.92);
+  color: #0f172a;
+  box-sizing: border-box;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.lingualens-settings-modal button {
+.lingualens-settings-modal input::placeholder,
+.lingualens-settings-modal textarea::placeholder,
+.lingualens-drawer input::placeholder,
+.lingualens-drawer textarea::placeholder {
+  color: #94a3b8;
+}
+
+.lingualens-settings-modal select:focus-visible,
+.lingualens-settings-modal input:focus-visible,
+.lingualens-settings-modal textarea:focus-visible,
+.lingualens-drawer select:focus-visible,
+.lingualens-drawer input:focus-visible,
+.lingualens-drawer textarea:focus-visible {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+  background: #ffffff;
+}
+
+.lingualens-settings-modal select:disabled,
+.lingualens-settings-modal input:disabled,
+.lingualens-settings-modal textarea:disabled,
+.lingualens-drawer select:disabled,
+.lingualens-drawer input:disabled,
+.lingualens-drawer textarea:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: rgba(226, 232, 240, 0.6);
+  border-color: rgba(203, 213, 225, 0.8);
+}
+
+.lingualens-settings-modal textarea,
+.lingualens-drawer textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.lingualens-settings-modal select,
+.lingualens-drawer select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.5 1.5L6 6.5L10.5 1.5' stroke='%23526784' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 12px 8px;
+  padding-right: 42px;
+}
+
+.lingualens-settings-modal input[type='number'],
+.lingualens-drawer input[type='number'] {
+  appearance: textfield;
+}
+
+.lingualens-settings-modal input[type='number']::-webkit-outer-spin-button,
+.lingualens-settings-modal input[type='number']::-webkit-inner-spin-button,
+.lingualens-drawer input[type='number']::-webkit-outer-spin-button,
+.lingualens-drawer input[type='number']::-webkit-inner-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+.lingualens-settings-modal button,
+.lingualens-drawer button {
   font-family: inherit;
 }
 
@@ -231,141 +325,471 @@
   position: absolute;
   right: 24px;
   bottom: 72px;
-  width: 320px;
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(4px);
-  border-radius: 12px;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.25);
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  padding: 16px;
+  width: 340px;
+  background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
+  backdrop-filter: blur(6px);
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: 0 22px 44px rgba(15, 23, 42, 0.22);
+  padding: 20px;
   pointer-events: auto;
-}
-
-.lingualens-bubble header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.lingualens-bubble header .actions {
+.lingualens-bubble .bubble-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.lingualens-bubble .bubble-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lingualens-bubble .bubble-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.lingualens-bubble .bubble-title h4 {
+  margin: 0;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+.lingualens-bubble .bubble-subtitle {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.lingualens-bubble .bubble-header .actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.lingualens-bubble header .primary {
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 11px;
-  cursor: pointer;
+.lingualens-bubble .bubble-header .primary {
+  padding: 6px 14px;
+  font-size: 12px;
+  min-height: auto;
 }
 
-.lingualens-bubble header .primary[disabled] {
-  opacity: 0.6;
+.lingualens-bubble .bubble-header .primary[disabled] {
+  opacity: 0.65;
   cursor: progress;
 }
 
-.lingualens-bubble header .ghost {
+.lingualens-bubble .bubble-header .ghost {
   border: none;
-  background: transparent;
-  color: #475569;
-  width: 28px;
-  height: 28px;
+  background: rgba(148, 163, 184, 0.18);
+  color: #334155;
+  width: 32px;
+  height: 32px;
   border-radius: 999px;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.2s ease, transform 0.15s ease;
 }
 
-.lingualens-bubble header .ghost:hover {
-  background: rgba(148, 163, 184, 0.2);
+.lingualens-bubble .bubble-header .ghost:hover {
+  background: rgba(148, 163, 184, 0.28);
+  transform: translateY(-1px);
 }
 
-.lingualens-bubble .anchor {
+.lingualens-bubble .bubble-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lingualens-bubble .anchor-card {
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lingualens-bubble .anchor-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
   font-weight: 600;
-  margin-bottom: 8px;
 }
 
-.lingualens-bubble .literal,
-.lingualens-bubble .context {
-  margin: 6px 0;
-  font-size: 13px;
-  line-height: 1.4;
+.lingualens-bubble .anchor-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.45;
 }
 
-.lingualens-bubble .status {
+.lingualens-bubble .bubble-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bubble-status {
+  margin: 0;
   font-size: 13px;
   color: #475569;
+}
+
+.bubble-status.error {
+  color: #dc2626;
+}
+
+.meaning-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  margin: 0;
+}
+
+.meaning-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meaning-card dt {
+  margin: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.meaning-card dd {
+  margin: 0;
+  font-size: 13px;
+  color: #0f172a;
+  line-height: 1.45;
+}
+
+.bubble-meta {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.bubble-meta .meta-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.bubble-meta .meta-value {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .lingualens-drawer {
   position: fixed;
   top: 0;
   right: 0;
-  width: 360px;
+  width: 420px;
   height: 100vh;
-  background: #fff;
-  box-shadow: -24px 0 48px rgba(15, 23, 42, 0.18);
-  padding: 20px;
+  background: linear-gradient(165deg, #ffffff 0%, #f1f5f9 100%);
+  box-shadow: -32px 0 64px rgba(15, 23, 42, 0.18);
+  padding: 28px 28px calc(24px + env(safe-area-inset-bottom, 12px));
+  border-left: 1px solid rgba(148, 163, 184, 0.24);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   pointer-events: auto;
 }
 
-.lingualens-drawer header {
+.lingualens-drawer .drawer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lingualens-drawer .drawer-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lingualens-drawer .drawer-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.lingualens-drawer .drawer-title h3 {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: -0.01em;
+  color: #0f172a;
+}
+
+.lingualens-drawer .drawer-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.lingualens-drawer .drawer-close {
+  border: none;
+  background: rgba(255, 255, 255, 0.75);
+  color: #334155;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  transition: background 0.2s ease, transform 0.15s ease;
+}
+
+.lingualens-drawer .drawer-close:hover {
+  background: rgba(148, 163, 184, 0.28);
+  transform: translateY(-1px);
+}
+
+.lingualens-drawer .drawer-tab-switcher {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px;
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: linear-gradient(160deg, rgba(248, 250, 252, 0.92) 0%, rgba(226, 232, 240, 0.85) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.lingualens-drawer .drawer-tab-switcher button {
+  border: none;
+  background: rgba(255, 255, 255, 0.9);
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #0f172a;
+  cursor: pointer;
+  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.1);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.lingualens-drawer .drawer-tab-switcher button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 28px rgba(37, 99, 235, 0.2);
+}
+
+.lingualens-drawer .drawer-tab-switcher button.active {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 22px 36px rgba(37, 99, 235, 0.28);
+}
+
+.lingualens-drawer .drawer-tab-switcher button:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+
+.lingualens-drawer .drawer-content {
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.drawer-panel {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.drawer-status {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.background-panel .paragraph {
+  margin: 0;
+  font-size: 15px;
+  color: #1f2937;
+  line-height: 1.7;
+}
+
+.background-panel .paragraph.detail {
+  font-size: 15px;
+  color: #334155;
+}
+
+.background-panel .highlights {
+  margin: 4px 0 0 18px;
+  padding: 0;
+  list-style: disc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #334155;
+  font-size: 14px;
+}
+
+.background-panel .note {
+  font-size: 14px;
+  color: #64748b;
+  margin: 6px 0 0;
+}
+
+.cross-culture-panel .cross-culture {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cross-culture-panel .insight-card {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(248, 250, 252, 0.88);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.cross-culture-panel .insight-card .entry-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-.lingualens-drawer nav {
-  display: flex;
   gap: 8px;
 }
 
-.lingualens-drawer nav button {
-  padding: 6px 10px;
-  font-size: 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.5);
-  background: transparent;
-  cursor: pointer;
+.cross-culture-panel .profile-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 15px;
 }
 
-.lingualens-drawer nav button.active {
-  background: #2563eb;
-  color: #fff;
-  border-color: #2563eb;
+.cross-culture-panel .headline {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 15px;
 }
 
-.lingualens-drawer section {
-  flex: 1;
-  overflow-y: auto;
+.cross-culture-panel .context {
+  margin: 0;
+  font-size: 15px;
+  color: #475569;
+}
+
+.cross-culture-panel .note {
+  margin: 0;
   font-size: 14px;
-  line-height: 1.5;
-  padding-bottom: 24px;
+  color: #64748b;
 }
 
-.lingualens-drawer footer {
+.sources-panel .sources {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sources-panel .source-card {
+  border: 1px solid rgba(148, 163, 184, 0.26);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: rgba(248, 250, 252, 0.88);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.sources-panel .source-card a {
+  color: #2563eb;
+  font-weight: 600;
+  font-size: 15px;
+  text-decoration: none;
+}
+
+.sources-panel .source-card a:hover {
+  text-decoration: underline;
+}
+
+.sources-panel .source-card p {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.lingualens-drawer .confidence {
+  font-size: 14px;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+}
+
+.lingualens-drawer .drawer-footer {
   display: flex;
   justify-content: center;
-  padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 8px));
+  padding-top: 12px;
   border-top: 1px solid rgba(148, 163, 184, 0.25);
 }
 
-.lingualens-drawer footer .profile-button {
-  padding: 10px 16px;
+.lingualens-drawer .drawer-footer .profile-button {
+  padding: 10px 18px;
   border-radius: 999px;
   border: 1px solid rgba(37, 99, 235, 0.35);
   background: rgba(37, 99, 235, 0.08);
@@ -373,20 +797,21 @@
   font-weight: 600;
   font-size: 13px;
   cursor: pointer;
-  transition: background 0.2s ease, box-shadow 0.2s ease;
+  transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
 }
 
-.lingualens-drawer footer .profile-button:hover {
+.lingualens-drawer .drawer-footer .profile-button:hover {
   background: rgba(37, 99, 235, 0.15);
-  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.2);
+  transform: translateY(-1px);
 }
 
-.lingualens-drawer footer .profile-button:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.5);
+.lingualens-drawer .drawer-footer .profile-button:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.45);
   outline-offset: 2px;
 }
 
-.lingualens-drawer footer .profile-button:active {
+.lingualens-drawer .drawer-footer .profile-button:active {
   background: rgba(37, 99, 235, 0.2);
 }
 
@@ -415,7 +840,50 @@
 .lingualens-settings-modal .profile-form {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
+}
+
+.lingualens-drawer .form-field,
+.lingualens-settings-modal .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lingualens-drawer .form-field input,
+.lingualens-drawer .form-field textarea,
+.lingualens-drawer .form-field select,
+.lingualens-settings-modal .form-field input,
+.lingualens-settings-modal .form-field textarea,
+.lingualens-settings-modal .form-field select {
+  margin: 0;
+}
+
+.lingualens-drawer .form-field__hint,
+.lingualens-settings-modal .form-field__hint,
+.lingualens-drawer .form-field__support,
+.lingualens-settings-modal .form-field__support {
+  margin: 0;
+  font-size: 12px;
+  color: #667085;
+  line-height: 1.4;
+}
+
+.lingualens-drawer .form-field__support,
+.lingualens-settings-modal .form-field__support {
+  color: #4b5563;
+}
+
+.lingualens-drawer .field-grid,
+.lingualens-settings-modal .field-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.lingualens-drawer .field-grid .form-field,
+.lingualens-settings-modal .field-grid .form-field {
+  height: 100%;
 }
 
 .lingualens-drawer .form-actions,
@@ -480,23 +948,26 @@
 .lingualens-drawer .profile-summary__secondary,
 .lingualens-settings-modal .profile-summary__secondary {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #2563eb;
   font-weight: 600;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
   cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .lingualens-drawer .profile-summary__secondary:hover,
 .lingualens-settings-modal .profile-summary__secondary:hover {
   background: rgba(37, 99, 235, 0.12);
+  border-color: rgba(37, 99, 235, 0.18);
 }
 
 .lingualens-drawer .profile-summary__secondary:focus-visible,
 .lingualens-settings-modal .profile-summary__secondary:focus-visible {
-  outline: 2px solid rgba(37, 99, 235, 0.45);
-  outline-offset: 2px;
+  outline: none;
+  border-color: rgba(37, 99, 235, 0.4);
+  background: rgba(37, 99, 235, 0.16);
 }
 
 .lingualens-drawer .profile-summary__hint,
@@ -536,20 +1007,22 @@
 
 .lingualens-drawer .profile-card,
 .lingualens-settings-modal .profile-card {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 14px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  gap: 10px;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .lingualens-drawer .profile-card:hover,
 .lingualens-settings-modal .profile-card:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 18px rgba(15, 23, 42, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+  border-color: rgba(37, 99, 235, 0.24);
 }
 
 .lingualens-drawer .profile-card.latest,
@@ -560,8 +1033,15 @@
 
 .lingualens-drawer .profile-card.active,
 .lingualens-settings-modal .profile-card.active {
-  border-color: rgba(37, 99, 235, 0.55);
+  border-color: rgba(37, 99, 235, 0.45);
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.18);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
+}
+
+.lingualens-drawer .profile-card.active:hover,
+.lingualens-settings-modal .profile-card.active:hover {
+  border-color: rgba(37, 99, 235, 0.55);
+  box-shadow: 0 22px 44px rgba(37, 99, 235, 0.22);
 }
 
 .lingualens-drawer .profile-card header,
@@ -569,7 +1049,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 12px;
+}
+
+.lingualens-drawer .profile-card header h4,
+.lingualens-settings-modal .profile-card header h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
 }
 
 .lingualens-drawer .profile-card__description,
@@ -577,25 +1065,39 @@
 .lingualens-settings-modal .profile-card__description,
 .lingualens-settings-modal .profile-card__meta {
   margin: 0;
-  font-size: 12px;
   color: #475569;
 }
 
+.lingualens-drawer .profile-card__description,
+.lingualens-settings-modal .profile-card__description {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.lingualens-drawer .profile-card__meta,
+.lingualens-settings-modal .profile-card__meta {
+  font-size: 12px;
+}
+
+.lingualens-drawer .profile-card__actions,
 .lingualens-settings-modal .profile-card__actions {
   display: flex;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
   margin-top: 6px;
 }
 
 .lingualens-drawer .profile-detail,
 .lingualens-settings-modal .profile-detail {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 14px;
-  padding: 18px;
-  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  border-radius: 18px;
+  padding: 20px;
+  background: linear-gradient(155deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
 }
 
 .lingualens-drawer .profile-detail__actions,
@@ -641,106 +1143,42 @@
   color: #2563eb;
 }
 
-.lingualens-drawer .badge {
+.lingualens-drawer .badge,
+.lingualens-settings-modal .badge {
   margin-left: 8px;
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 6px;
-  text-transform: capitalize;
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.18);
+  color: #475569;
 }
 
-.lingualens-drawer .badge-high {
+.lingualens-drawer .badge-active,
+.lingualens-settings-modal .badge-active {
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+  box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.45);
+}
+
+.lingualens-drawer .badge-high,
+.lingualens-settings-modal .badge-high {
   background: rgba(22, 163, 74, 0.15);
   color: #15803d;
 }
 
-.lingualens-drawer .badge-medium {
+.lingualens-drawer .badge-medium,
+.lingualens-settings-modal .badge-medium {
   background: rgba(251, 191, 36, 0.15);
   color: #b45309;
 }
 
-.lingualens-drawer .badge-low {
+.lingualens-drawer .badge-low,
+.lingualens-settings-modal .badge-low {
   background: rgba(248, 113, 113, 0.15);
   color: #b91c1c;
-}
-
-.lingualens-drawer .background .detail {
-  margin-top: 8px;
-  color: #1e293b;
-}
-
-.lingualens-drawer .background .highlights {
-  margin: 12px 0 0 18px;
-  padding: 0;
-  list-style: disc;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.lingualens-drawer .cross-culture .headline {
-  font-weight: 600;
-  margin: 4px 0;
-}
-
-.lingualens-drawer .cross-culture .context {
-  color: #475569;
-  font-size: 13px;
-}
-
-.lingualens-drawer .background .note,
-.lingualens-drawer .cross-culture-block .note {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #475569;
-}
-
-.lingualens-drawer .confidence {
-  font-size: 12px;
-  color: #334155;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.lingualens-drawer .cross-culture-block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lingualens-drawer .cross-culture {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.lingualens-drawer .cross-culture li {
-  border: 1px solid rgba(148, 163, 184, 0.35);
-  border-radius: 10px;
-  padding: 12px;
-  background: rgba(248, 250, 252, 0.6);
-}
-
-.lingualens-drawer .cross-culture .entry-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 6px;
-}
-
-.lingualens-drawer .cross-culture .profile-name {
-  font-weight: 600;
-  color: #0f172a;
-}
-
-.lingualens-drawer .sources-block {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
 }
 
 .status {
@@ -768,6 +1206,12 @@
   gap: 10px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.history-tab .export-hint {
+  font-size: 12px;
+  color: #94a3b8;
+  margin: 4px 0 0;
 }
 
 .history-list {

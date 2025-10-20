@@ -1,11 +1,121 @@
 import * as React from 'react';
 const { useCallback, useEffect, useMemo, useRef, useState } = React;
 import { getStorageAdapter } from '../../../shared/storageAdapter.js';
-import type { HistoryEntry } from '../../../shared/types.js';
+import type { DeepExplainResponse, HistoryEntry } from '../../../shared/types.js';
 import type { ToastHandler } from '../SettingsModal.js';
 
 interface HistoryTabProps {
   onNotify: ToastHandler;
+}
+
+type FlashcardInsight = {
+  profile: string;
+  analogy: string;
+  context?: string;
+  notes?: string;
+  confidence?: string;
+};
+
+type Flashcard = {
+  term: string;
+  profile: string;
+  summary: string;
+  backgroundSummary: string;
+  backgroundDetail: string;
+  highlights: string[];
+  insights: FlashcardInsight[];
+  reasoningNotes: string;
+  createdAt: string;
+};
+
+function coerceDeepResponse(data: unknown): Partial<DeepExplainResponse> | null {
+  if (!data || typeof data !== 'object') return null;
+  return data as Partial<DeepExplainResponse>;
+}
+
+function buildFlashcards(entries: HistoryEntry[]): Flashcard[] {
+  return entries.map((entry) => {
+    const deep = coerceDeepResponse(entry.deepResponse);
+    const background = deep?.background ?? null;
+    const crossCulture = Array.isArray(deep?.crossCulture) ? deep?.crossCulture : [];
+    const summary = entry.resultSummary ?? background?.summary ?? '';
+    const backgroundSummary = background?.summary ?? '';
+    const backgroundDetail = background?.detail ?? '';
+    const highlights = Array.isArray(background?.highlights) ? background?.highlights : [];
+    const insights: FlashcardInsight[] = crossCulture
+      .filter((item) => item && typeof item === 'object')
+      .map((insight) => ({
+        profile: insight.profileName || insight.profileId || 'Profile',
+        analogy: insight.analogy || '',
+        context: insight.context || undefined,
+        notes: insight.notes || undefined,
+        confidence: insight.confidence || undefined
+      }));
+    const reasoningNotes = deep?.reasoningNotes ?? '';
+    const createdAt = new Date(entry.createdAt).toLocaleString();
+    return {
+      term: entry.query,
+      profile: entry.profileName || entry.profileId || 'Default',
+      summary,
+      backgroundSummary,
+      backgroundDetail,
+      highlights,
+      insights,
+      reasoningNotes,
+      createdAt
+    };
+  });
+}
+
+function exportFlashcardsMarkdown(entries: HistoryEntry[]): string {
+  const cards = buildFlashcards(entries);
+  const lines: string[] = [
+    '# LinguaLens Flashcards',
+    '',
+    `Generated at ${new Date().toISOString()}`,
+    ''
+  ];
+
+  cards.forEach((card, index) => {
+    lines.push(`## ${index + 1}. ${card.term}`);
+    lines.push(`- Profile: ${card.profile}`);
+    lines.push(`- Added: ${card.createdAt}`);
+    if (card.summary) {
+      lines.push(`- Summary: ${card.summary}`);
+    }
+    if (card.backgroundSummary && card.backgroundSummary !== card.summary) {
+      lines.push(`- Background: ${card.backgroundSummary}`);
+    }
+    if (card.backgroundDetail) {
+      lines.push('');
+      lines.push('  Detail:');
+      lines.push(`  ${card.backgroundDetail}`);
+    }
+    if (card.highlights.length) {
+      lines.push('');
+      lines.push('  Highlights:');
+      card.highlights.forEach((item) => {
+        lines.push(`  - ${item}`);
+      });
+    }
+    if (card.insights.length) {
+      lines.push('');
+      lines.push('  Cross-culture insights:');
+      card.insights.forEach((insight) => {
+        lines.push(`  - ${insight.profile}: ${insight.analogy}`);
+        if (insight.context) lines.push(`    Context: ${insight.context}`);
+        if (insight.notes) lines.push(`    Notes: ${insight.notes}`);
+        if (insight.confidence) lines.push(`    Confidence: ${insight.confidence}`);
+      });
+    }
+    if (card.reasoningNotes) {
+      lines.push('');
+      lines.push(`  Reasoning notes: ${card.reasoningNotes}`);
+    }
+    lines.push('');
+  });
+
+  return `${lines.join('\n').trim()}\n`;
 }
 
 export const HistoryTab: React.FC<HistoryTabProps> = ({ onNotify }) => {
@@ -77,6 +187,29 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onNotify }) => {
     onNotify('success', 'History exported');
   }, [entries, onNotify]);
 
+  const handleExportFlashcards = useCallback(async () => {
+      if (!entries.length) {
+        onNotify('info', 'No history to export');
+        return;
+      }
+      try {
+        const markdown = exportFlashcardsMarkdown(entries);
+        const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `lingualens-flashcards-${new Date().toISOString()}.md`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        onNotify('success', 'Flashcards exported as Markdown');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        onNotify('error', `Failed to export flashcards: ${message}`);
+      }
+    }, [entries, onNotify]);
+
   const handleImportHistory = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
@@ -119,6 +252,9 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onNotify }) => {
         <button type="button" className="primary outline" onClick={handleExportHistory}>
           Export JSON
         </button>
+        <button type="button" className="primary outline" onClick={handleExportFlashcards}>
+          Export Markdown
+        </button>
         <button
           type="button"
           className="primary outline"
@@ -136,6 +272,10 @@ export const HistoryTab: React.FC<HistoryTabProps> = ({ onNotify }) => {
           className="hidden-input"
           onChange={handleImportHistory}
         />
+        <p className="export-hint">
+          Tip: convert the exported Markdown to PDF with your preferred tool (e.g. Pandoc, Typora,
+          or Obsidian) to keep fonts and layouts you control.
+        </p>
       </div>
       {loading && <p className="status">Loading history…</p>}
       {!loading && error && <p className="error">{error}</p>}

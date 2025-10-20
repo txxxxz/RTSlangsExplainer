@@ -32,33 +32,39 @@ export const KeyManager: React.FC<KeyManagerProps> = ({ value, onSave }) => {
 
   return (
     <form onSubmit={handleSubmit}>
-      <label htmlFor="openaiKey">OpenAI API Key</label>
-      <input
-        id="openaiKey"
-        type="password"
-        value={openaiKey}
-        onChange={(event) => setOpenaiKey(event.target.value)}
-        placeholder="sk-..."
-        required
-      />
+      <div className="form-field">
+        <label htmlFor="openaiKey">OpenAI API Key</label>
+        <input
+          id="openaiKey"
+          type="password"
+          value={openaiKey}
+          onChange={(event) => setOpenaiKey(event.target.value)}
+          placeholder="sk-..."
+          required
+        />
+      </div>
 
-      <label htmlFor="langGraphKey">LangGraph API Key (optional)</label>
-      <input
-        id="langGraphKey"
-        type="password"
-        value={langGraphKey}
-        onChange={(event) => setLangGraphKey(event.target.value)}
-        placeholder="lg-..."
-      />
+      <div className="form-field">
+        <label htmlFor="langGraphKey">LangGraph API Key (optional)</label>
+        <input
+          id="langGraphKey"
+          type="password"
+          value={langGraphKey}
+          onChange={(event) => setLangGraphKey(event.target.value)}
+          placeholder="lg-..."
+        />
+      </div>
 
-  <label htmlFor="openaiBaseUrl">OpenAI Base URL</label>
-  <input
-    id="openaiBaseUrl"
-    value={openaiBaseUrl}
-    onChange={(event) => setOpenaiBaseUrl(event.target.value)}
-    placeholder={DEFAULT_OPENAI_BASE_URL}
-    required
-  />
+      <div className="form-field">
+        <label htmlFor="openaiBaseUrl">OpenAI Base URL</label>
+        <input
+          id="openaiBaseUrl"
+          value={openaiBaseUrl}
+          onChange={(event) => setOpenaiBaseUrl(event.target.value)}
+          placeholder={DEFAULT_OPENAI_BASE_URL}
+          required
+        />
+      </div>
 
       <button className="primary" type="submit">
         Save Keys

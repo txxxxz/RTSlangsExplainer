@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type { ProfileTemplate } from '../shared/types.js';
 import { DEFAULT_PROFILE_TONE } from '../shared/profile.js';
 import {
@@ -55,6 +55,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [successContext, setSuccessContext] = useState<'created' | 'view'>('created');
   const [formError, setFormError] = useState<string | null>(null);
+  const hasInitializedListView = useRef(false);
 
   const AGE_RANGE_OPTIONS = useMemo(
     () => ['Under 10', '10-18', '18-25', '26-35', '36-45', '46-55', '56+', 'Prefer not to say'],
@@ -192,6 +193,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   }, [profiles.length]);
 
   useEffect(() => {
+    if (profiles.length > 0 && !hasInitializedListView.current) {
+      hasInitializedListView.current = true;
+      setViewMode((previous) => (previous === 'form' ? 'list' : previous));
+    }
+    if (profiles.length === 0) {
+      hasInitializedListView.current = false;
+    }
+  }, [profiles.length]);
+
+  useEffect(() => {
     if (viewMode === 'detail' && selectedProfileId && !selectedProfile) {
       setSelectedProfileId(null);
       setViewMode(profiles.length ? 'list' : 'form');
@@ -325,219 +336,265 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       </p>
       {formError && <p className="profile-form__error" role="alert">{formError}</p>}
 
-      <label htmlFor="profileName">Profile Name</label>
-      <input
-        id="profileName"
-        value={name}
-        onChange={(event) => {
-          if (formError) {
-            setFormError(null);
-          }
-          setName(event.target.value);
-        }}
-        placeholder="Comedy Night Learner"
-        required
-      />
-
-      <label htmlFor="profileDescription">Description</label>
-      <textarea
-        id="profileDescription"
-        value={description}
-        onChange={(event) => setDescription(event.target.value)}
-        placeholder="Prefers literal translation with UK/US tone comparison."
-      />
-
-      <label htmlFor="primaryLanguage">Primary Language</label>
-      <select
-        id="primaryLanguage"
-        value={primaryLanguage}
-        onChange={(event) => {
-          setPrimaryLanguage(event.target.value);
-          setLanguageNotice(null);
-          if (formError) {
-            setFormError(null);
-          }
-        }}
-        required
-      >
-        {LANGUAGE_OPTIONS.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      <p className="profile-form__hint">
-        Supported languages: {LANGUAGE_OPTIONS.map((option) => option.label).join(', ')}.
-      </p>
-      {languageNotice && <p className="profile-form__warning">{languageNotice}</p>}
-
-      <label htmlFor="cultures">Culture Tags (comma separated)</label>
-      <input
-        id="cultures"
-        value={cultures}
-        onChange={(event) => setCultures(event.target.value)}
-        placeholder="US,UK"
-      />
-
-      <label htmlFor="ageRange">Age Range</label>
-      <select
-        id="ageRange"
-        value={ageRangeSelectValue}
-        onChange={(event) => {
-          const value = event.target.value;
-          if (value === 'custom') {
-            setUseCustomAgeRange(true);
-            setAgeRange('');
-          } else {
-            setUseCustomAgeRange(false);
-            setAgeRange(value);
-          }
-        }}
-      >
-        <option value="" disabled>
-          Select age range
-        </option>
-        {AGE_RANGE_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-        <option value="custom">Custom…</option>
-      </select>
-      {useCustomAgeRange && (
+      <div className="form-field">
+        <label htmlFor="profileName">Profile Name</label>
         <input
-          value={ageRange}
-          onChange={(event) => setAgeRange(event.target.value)}
-          placeholder="Describe the age range"
+          id="profileName"
+          value={name}
+          onChange={(event) => {
+            if (formError) {
+              setFormError(null);
+            }
+            setName(event.target.value);
+          }}
+          placeholder="Comedy Night Learner"
+          required
         />
-      )}
+      </div>
 
-      <label htmlFor="gender">Sex / Gender Identity</label>
-      <select
-        id="gender"
-        value={genderSelectValue}
-        onChange={(event) => {
-          const value = event.target.value;
-          if (!value) {
-            setGender('');
-            setUseCustomGender(false);
-          } else if (value === 'custom') {
-            setUseCustomGender(true);
-            setGender('');
-          } else {
-            setUseCustomGender(false);
-            setGender(value);
-          }
-        }}
-      >
-        <option value="">Prefer not to say</option>
-        {GENDER_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-        <option value="custom">Custom…</option>
-      </select>
-      {useCustomGender && (
+      <div className="form-field">
+        <label htmlFor="profileDescription">Description</label>
+        <textarea
+          id="profileDescription"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Prefers literal translation with UK/US tone comparison."
+        />
+      </div>
+
+      <div className="form-field">
+        <label htmlFor="primaryLanguage">Primary Language</label>
+        <select
+          id="primaryLanguage"
+          value={primaryLanguage}
+          onChange={(event) => {
+            setPrimaryLanguage(event.target.value);
+            setLanguageNotice(null);
+            if (formError) {
+              setFormError(null);
+            }
+          }}
+          required
+        >
+          {LANGUAGE_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <p className="form-field__support">
+          Supported languages: {LANGUAGE_OPTIONS.map((option) => option.label).join(', ')}.
+        </p>
+        {languageNotice && <p className="profile-form__warning">{languageNotice}</p>}
+      </div>
+
+      <div className="form-field">
+        <label htmlFor="cultures">Culture Tags (comma separated)</label>
         <input
-          value={gender}
-          onChange={(event) => setGender(event.target.value)}
-          placeholder="Describe your identity"
+          id="cultures"
+          value={cultures}
+          onChange={(event) => setCultures(event.target.value)}
+          placeholder="US,UK"
         />
-      )}
+      </div>
 
-      <label htmlFor="region">Country / Region</label>
-      <input
-        id="region"
-        value={region}
-        onChange={(event) => setRegion(event.target.value)}
-        placeholder="Hong Kong, Canada, Malaysia..."
-      />
+      <div className="field-grid">
+        <div className="form-field">
+          <label htmlFor="ageRange">Age Range</label>
+          <select
+            id="ageRange"
+            value={ageRangeSelectValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === 'custom') {
+                setUseCustomAgeRange(true);
+                setAgeRange('');
+              } else {
+                setUseCustomAgeRange(false);
+                setAgeRange(value);
+              }
+            }}
+          >
+            <option value="" disabled>
+              Select age range
+            </option>
+            {AGE_RANGE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+            <option value="custom">Custom…</option>
+          </select>
+          {useCustomAgeRange && (
+            <>
+              <input
+                value={ageRange}
+                onChange={(event) => setAgeRange(event.target.value)}
+                placeholder="Describe the age range"
+              />
+              <p className="form-field__hint">
+                Give a short description so LinguaLens understands the life stage you have in mind.
+              </p>
+            </>
+          )}
+        </div>
 
-      <label htmlFor="occupation">Occupation</label>
-      <select
-        id="occupation"
-        value={occupationSelectValue}
-        onChange={(event) => {
-          const value = event.target.value;
-          if (value === 'custom') {
-            setUseCustomOccupation(true);
-            setOccupation('');
-          } else {
-            setUseCustomOccupation(false);
-            setOccupation(value);
-          }
-        }}
-      >
-        <option value="" disabled>
-          Select occupation
-        </option>
-        {OCCUPATION_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
+        <div className="form-field">
+          <label htmlFor="gender">Sex / Gender Identity</label>
+          <select
+            id="gender"
+            value={genderSelectValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (!value) {
+                setGender('');
+                setUseCustomGender(false);
+              } else if (value === 'custom') {
+                setUseCustomGender(true);
+                setGender('');
+              } else {
+                setUseCustomGender(false);
+                setGender(value);
+              }
+            }}
+          >
+            <option value="">Prefer not to say</option>
+            {GENDER_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+            <option value="custom">Custom…</option>
+          </select>
+          {useCustomGender && (
+            <>
+              <input
+                value={gender}
+                onChange={(event) => setGender(event.target.value)}
+                placeholder="Describe your identity"
+              />
+              <p className="form-field__hint">
+                Share the words that feel right so responses keep the tone inclusive and accurate.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="field-grid">
+        <div className="form-field">
+          <label htmlFor="region">Country / Region</label>
+          <input
+            id="region"
+            value={region}
+            onChange={(event) => setRegion(event.target.value)}
+            placeholder="Hong Kong, Canada, Malaysia..."
+          />
+        </div>
+
+        <div className="form-field">
+          <label htmlFor="occupation">Occupation</label>
+          <select
+            id="occupation"
+            value={occupationSelectValue}
+            onChange={(event) => {
+              const value = event.target.value;
+              if (value === 'custom') {
+                setUseCustomOccupation(true);
+                setOccupation('');
+              } else {
+                setUseCustomOccupation(false);
+                setOccupation(value);
+              }
+            }}
+          >
+            <option value="" disabled>
+              Select occupation
+            </option>
+            {OCCUPATION_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+            <option value="custom">Custom…</option>
+          </select>
+          {useCustomOccupation && (
+            <>
+              <input
+                value={occupation}
+                onChange={(event) => setOccupation(event.target.value)}
+                placeholder="Describe your occupation"
+              />
+              <p className="form-field__hint">
+                Mention your day-to-day work so examples and analogies stay relevant.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="form-field">
+        <label htmlFor="tone-select">Tone Guidance</label>
+        <select
+          id="tone-select"
+          value={toneSelectValue}
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === 'custom') {
+              setUseCustomTone(true);
+              setTone('');
+            } else {
+              setUseCustomTone(false);
+              setTone(value);
+            }
+          }}
+        >
+          <option value="" disabled>
+            Select tone preference
           </option>
-        ))}
-        <option value="custom">Custom…</option>
-      </select>
-      {useCustomOccupation && (
-        <input
-          value={occupation}
-          onChange={(event) => setOccupation(event.target.value)}
-          placeholder="Describe your occupation"
-        />
-      )}
-
-      <label htmlFor="tone-select">Tone Guidance</label>
-      <select
-        id="tone-select"
-        value={toneSelectValue}
-        onChange={(event) => {
-          const value = event.target.value;
-          if (value === 'custom') {
-            setUseCustomTone(true);
-            setTone('');
-          } else {
-            setUseCustomTone(false);
+          {TONE_OPTIONS.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+          <option value="custom">Custom…</option>
+        </select>
+        <textarea
+          id="tone"
+          value={tone}
+          onChange={(event) => {
+            const value = event.target.value;
             setTone(value);
-          }
-        }}
-      >
-        <option value="" disabled>
-          Select tone preference
-        </option>
-        {TONE_OPTIONS.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-        <option value="custom">Custom…</option>
-      </select>
-      <textarea
-        id="tone"
-        value={tone}
-        onChange={(event) => {
-          const value = event.target.value;
-          setTone(value);
-          setUseCustomTone(!TONE_OPTIONS.includes(value));
-        }}
-        placeholder="Describe the tone (e.g., warm, humorous, scholarly)."
-      />
+            setUseCustomTone(!TONE_OPTIONS.includes(value));
+          }}
+          placeholder="Describe the tone (e.g., warm, humorous, scholarly)."
+        />
+        {useCustomTone && (
+          <p className="form-field__hint">
+            Describe the voice or personality you want so the assistant mirrors it reliably.
+          </p>
+        )}
+      </div>
 
-      <label htmlFor="personalPreference">Personal Preference</label>
-      <textarea
-        id="personalPreference"
-        value={personalPreference}
-        onChange={(event) => setPersonalPreference(event.target.value)}
-        placeholder='Describe how you want explanations delivered (e.g., "Explain like a friendly princess with magical metaphors").'
-      />
+      <div className="form-field">
+        <label htmlFor="personalPreference">Personal Preference</label>
+        <textarea
+          id="personalPreference"
+          value={personalPreference}
+          onChange={(event) => setPersonalPreference(event.target.value)}
+          placeholder='Describe how you want explanations delivered (e.g., "Explain like a friendly princess with magical metaphors").'
+        />
+      </div>
 
-      <label htmlFor="goals">Learning Goals</label>
-      <textarea
-        id="goals"
-        value={goals}
-        onChange={(event) => setGoals(event.target.value)}
-        placeholder="Focus on sarcasm vs sincerity cues."
-      />
+      <div className="form-field">
+        <label htmlFor="goals">Learning Goals</label>
+        <textarea
+          id="goals"
+          value={goals}
+          onChange={(event) => setGoals(event.target.value)}
+          placeholder="Focus on sarcasm vs sincerity cues."
+        />
+      </div>
 
       <div className="form-actions">
         <button className="primary" type="submit" disabled={!canSubmit}>

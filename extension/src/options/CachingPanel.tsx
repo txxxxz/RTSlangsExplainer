@@ -29,26 +29,30 @@ export const CachingPanel: React.FC = () => {
   };
 
   return (
-    <div>
-      <label htmlFor="quickTtl">Quick Explain TTL (minutes)</label>
-      <input
-        id="quickTtl"
-        type="number"
-        min={5}
-        max={180}
-        value={settings.quickTtlMinutes}
-        onChange={handleChange('quickTtlMinutes')}
-      />
+    <div className="form-stack">
+      <div className="form-field">
+        <label htmlFor="quickTtl">Quick Explain TTL (minutes)</label>
+        <input
+          id="quickTtl"
+          type="number"
+          min={5}
+          max={180}
+          value={settings.quickTtlMinutes}
+          onChange={handleChange('quickTtlMinutes')}
+        />
+      </div>
 
-      <label htmlFor="maxEntries">Max Cached Entries</label>
-      <input
-        id="maxEntries"
-        type="number"
-        min={50}
-        max={1000}
-        value={settings.maxEntries}
-        onChange={handleChange('maxEntries')}
-      />
+      <div className="form-field">
+        <label htmlFor="maxEntries">Max Cached Entries</label>
+        <input
+          id="maxEntries"
+          type="number"
+          min={50}
+          max={1000}
+          value={settings.maxEntries}
+          onChange={handleChange('maxEntries')}
+        />
+      </div>
 
       <button className="primary" type="button" onClick={handleSave}>
         Save Policy

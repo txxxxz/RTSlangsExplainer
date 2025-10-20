@@ -80,7 +80,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTa
             ×
           </button>
         </header>
-        <nav>
+        <nav className="settings-tab-switcher">
           {TABS.map((tab) => (
             <button
               key={tab}

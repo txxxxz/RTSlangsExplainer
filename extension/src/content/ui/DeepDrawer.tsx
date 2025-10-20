@@ -22,6 +22,10 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
   const overallConfidence = data?.confidence?.level;
   const confidenceNotes = data?.confidence?.notes;
   const reasoningNotes = data?.reasoningNotes;
+  const drawerLanguage = data?.language;
+  const generatedDisplay = data?.generatedAt
+    ? new Date(data.generatedAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   useEffect(() => {
     if (open) {
@@ -32,19 +36,23 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
 
   const content = useMemo(() => {
     if (!data) {
-      return <p className="status">{loading ? 'Gathering sources…' : 'Waiting for details…'}</p>;
+      return (
+        <div className="drawer-panel">
+          <p className="drawer-status">{loading ? 'Gathering sources…' : 'Waiting for details…'}</p>
+        </div>
+      );
     }
     switch (tab) {
       case 'Background':
         if (!background) {
           return (
-            <div className="background">
-              <p className="paragraph">{loading ? 'Background loading…' : 'No background available.'}</p>
+            <div className="drawer-panel">
+              <p className="drawer-status">{loading ? 'Background loading…' : 'No background available.'}</p>
             </div>
           );
         }
         return (
-          <div className="background">
+          <div className="drawer-panel background-panel">
             <p className="paragraph">{normalizeField(background.summary)}</p>
             {background.detail && <p className="paragraph detail">{normalizeField(background.detail)}</p>}
             {!!background.highlights?.length && (
@@ -60,13 +68,15 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
       case 'Cross-culture':
         if (!crossCulture.length) {
           return (
-            <p className="status">
-              {loading ? 'Cross-culture insights loading…' : 'No cross-culture variants yet.'}
-            </p>
+            <div className="drawer-panel">
+              <p className="drawer-status">
+                {loading ? 'Cross-culture insights loading…' : 'No cross-culture variants yet.'}
+              </p>
+            </div>
           );
         }
         return (
-          <div className="cross-culture-block">
+          <div className="drawer-panel cross-culture-panel">
             {overallConfidence && (
               <p className="confidence">
                 Overall confidence <span className={`badge badge-${overallConfidence}`}>{overallConfidence}</span>
@@ -75,7 +85,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
             )}
             <ul className="cross-culture">
               {crossCulture.map((insight) => (
-                <li key={insight.profileId}>
+                <li key={insight.profileId} className="insight-card">
                   <div className="entry-header">
                     <span className="profile-name">{normalizeField(insight.profileName)}</span>
                     <span className={`badge badge-${insight.confidence}`}>{normalizeField(insight.confidence)}</span>
@@ -92,13 +102,13 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
       case 'Sources':
         if (!sources.length) {
           return (
-            <p className="status">
-              {loading ? 'Sources on the way…' : 'No sources available.'}
-            </p>
+            <div className="drawer-panel">
+              <p className="drawer-status">{loading ? 'Sources on the way…' : 'No sources available.'}</p>
+            </div>
           );
         }
         return (
-          <div className="sources-block">
+          <div className="drawer-panel sources-panel">
             {overallConfidence && (
               <p className="confidence">
                 Overall confidence <span className={`badge badge-${overallConfidence}`}>{normalizeField(overallConfidence)}</span>
@@ -107,7 +117,7 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
             )}
             <ul className="sources">
               {sources.map((source) => (
-                <li key={source.url || source.title}>
+                <li key={source.url || source.title} className="source-card">
                   <a href={source.url} target="_blank" rel="noreferrer">
                     {normalizeField(source.title)}
                   </a>
@@ -126,14 +136,24 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
   if (!open) return null;
 
   return (
-    <div className="lingualens-drawer">
-      <header>
-        <h3>LinguaLens Deep Explain</h3>
-        <button type="button" onClick={onClose}>
-          Close
+    <div className="lingualens-drawer" role="dialog" aria-label="LinguaLens deep explain">
+      <header className="drawer-header">
+        <div className="drawer-title">
+          <span className="drawer-eyebrow">Deep explain</span>
+          <h3>LinguaLens Insight Deck</h3>
+          <p className="drawer-subtitle">
+            {drawerLanguage
+              ? `Surface language: ${drawerLanguage.toUpperCase()}${generatedDisplay ? ` · refreshed ${generatedDisplay}` : ''}`
+              : generatedDisplay
+                ? `Generated around ${generatedDisplay}`
+                : 'Layered cultural context with sources and variants.'}
+          </p>
+        </div>
+        <button type="button" className="drawer-close" onClick={onClose} aria-label="Close deep explain panel">
+          ×
         </button>
       </header>
-      <nav>
+      <nav className="drawer-tab-switcher" aria-label="Deep explain sections">
         {TAB_KEYS.map((key) => (
           <button
             key={key}
@@ -145,8 +165,8 @@ export const DeepDrawer: React.FC<DeepDrawerProps> = ({ open, loading, data, onC
           </button>
         ))}
       </nav>
-      <section>{content}</section>
-      <footer>
+      <section className="drawer-content">{content}</section>
+      <footer className="drawer-footer">
         <button type="button" className="profile-button" onClick={() => setSettingsOpen(true)}>
           Settings ⚙️
         </button>
