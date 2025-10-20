@@ -51,6 +51,7 @@ export interface DeepExplainResponse {
   reasoningNotes?: string;
   profileId?: string;
   generatedAt: number;
+  language?: string;
 }
 
 export interface ExplainRequestPayload {

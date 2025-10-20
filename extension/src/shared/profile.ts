@@ -1,4 +1,5 @@
 import type { ProfileDemographics, ProfileTemplate } from './types.js';
+import { normalizeLanguageCode } from './languageCodes.js';
 
 export const DEFAULT_PROFILE_DEMOGRAPHICS: ProfileDemographics = {
   ageRange: 'unspecified',
@@ -24,8 +25,10 @@ export function normalizeProfileTemplate(profile: RawProfileTemplate): ProfileTe
   const tone = profile.tone ?? DEFAULT_PROFILE_TONE;
   const goals = profile.goals ?? undefined;
   const personalPreference = profile.personalPreference?.trim();
+  const primaryLanguage = normalizeLanguageCode(profile.primaryLanguage) ?? 'en';
   return {
     ...profile,
+    primaryLanguage,
     demographics,
     tone,
     personalPreference: personalPreference || undefined,

@@ -70,6 +70,7 @@ class DeepExplainResponse(BaseModel):
     reasoningNotes: str | None = None
     profileId: str | None = None
     generatedAt: int
+    language: str | None = None
 
 
 class ExplainJobStatus(BaseModel):

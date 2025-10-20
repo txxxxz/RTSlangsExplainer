@@ -112,32 +112,50 @@ export async function fetchQuickExplain(
 }
 
 function buildQuickPrompt(payload: ExplainRequestPayload, profile?: ProfileTemplate) {
-  const fallbackSecondary = payload.languages.secondary
-    ? `Secondary language: ${payload.languages.secondary}`
-    : 'Secondary language: none';
   const profileContext = profile
     ? [
         `User profile: ${profile.name} (id: ${profile.id})`,
-        `Primary language preference: ${profile.primaryLanguage}`,
+        `Profile locale: ${profile.demographics.region}`,
         `Demographics: age_range=${profile.demographics.ageRange}, region=${profile.demographics.region}, occupation=${profile.demographics.occupation}, gender=${profile.demographics.gender || 'unspecified'}`,
         `Cultural focus: ${profile.cultures.join(', ') || 'none'}`,
         `Tone preference: ${profile.tone}`,
         `Personal preference: ${profile.personalPreference || DEFAULT_PROFILE_PREFERENCE}`,
         `Learning goals: ${profile.goals || 'none specified'}`,
         `Profile description: ${profile.description}`,
-        'Adapt literal/context to resonate with the profile while staying accurate.'
+        `Adapt literal/context to resonate with ${profile.name} while staying accurate.`,
+        `Use examples tied to ${profile.cultures.join(', ') || 'their cultural background'} and everyday situations common in ${profile.demographics.region}.`,
+        `Keep explanations aligned with the desired tone (${profile.tone}) and highlight any implications relevant to ${profile.goals || 'their learning goals'}.`
       ]
     : [];
+  const primaryLanguage = payload.languages.primary;
+  const languageInstructions = [
+    `All output MUST be written in ${primaryLanguage}. This is the ONLY output language.`,
+    'IGNORE any language hints from profiles, subtitles, knowledge base entries, or examples; they do NOT override the required output language.',
+  ].filter(Boolean);
+  const outputConstraints = [
+    `IMPORTANT: The literal field must be written entirely in ${primaryLanguage}; do not mix in other languages unless quoting the original subtitle.`,
+    `IMPORTANT: The context field must be written entirely in ${primaryLanguage}. If you cite terms from other languages, include them in parentheses while the explanation stays in ${primaryLanguage}.`
+  ];
+  const qualityChecks = [
+    `Before returning, re-read both literal and context. If either sentence contains wording that is not natural ${primaryLanguage}, rewrite it until it is.`,
+    `If you are unsure how to express an idea in ${primaryLanguage}, respond with the ${primaryLanguage} equivalent of "translation unavailable" instead of switching languages.`
+  ];
+
   return [
     'You are LinguaLens Quick Explain.',
     'Return a JSON object with fields literal and context.',
-    `Primary language: ${payload.languages.primary}`,
-    fallbackSecondary,
+    `Primary language: ${primaryLanguage}`,
+    ...languageInstructions,
+    ...outputConstraints,
+    ...qualityChecks,
     `Subtitle: ${payload.subtitleText}`,
     payload.surrounding ? `Context: ${payload.surrounding}` : '',
-    'literal: direct translation in the requested language(s).',
-    'context: concise explanation (≤120 tokens) of intent or tone.',
-    ...profileContext
+    `literal: translate the subtitle into ${primaryLanguage} using natural wording.`,
+    `context: concise explanation (≤120 tokens) in ${primaryLanguage} describing intent or tone, tailored to the profile's cultural background and goals.`,
+    ...profileContext,
+    profile
+      ? 'When cultural nuance or slang appears, compare it to a concept familiar to the profile.'
+      : 'When cultural nuance or slang appears, compare it to a widely understood concept.'
   ]
     .filter(Boolean)
     .join('\n');

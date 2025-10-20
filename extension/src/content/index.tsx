@@ -127,7 +127,6 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
   startSubtitleRelay();
 } else {
   const primaryLanguage = safeParseLanguage(navigator.language);
-  const secondaryLanguage = primaryLanguage.startsWith('en') ? undefined : 'en';
 
   const styleHref = chrome.runtime.getURL('content/styles/overlay.css');
   const styleEl = document.createElement('link');
@@ -250,10 +249,9 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
 
     const languages = useMemo(
       () => ({
-        primary: primaryLanguage,
-        secondary: secondaryLanguage
+        primary: primaryLanguage
       }),
-      []
+      [primaryLanguage]
     );
 
     useEffect(() => {

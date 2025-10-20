@@ -11,13 +11,107 @@ from ..core.config import get_settings
 from ..schemas.explain import (
     DeepExplainResponse,
     ExplainRequest,
+    LanguagePair,
     SourceReference,
     QuickExplainResponse
 )
+from ..schemas.model import ModelConfig
+from ..services.models import ModelStore
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_PROFILE_PREFERENCE = 'Explain concepts with relatable, everyday examples.'
+
+LANGUAGE_ALIASES: dict[str, str] = {
+    'en': 'en',
+    'en-us': 'en',
+    'en-gb': 'en',
+    'en-uk': 'en',
+    'en-au': 'en',
+    'en-ca': 'en',
+    'en_in': 'en',
+    'en_us': 'en',
+
+    'zh': 'zh-cn',
+    'zh-cn': 'zh-cn',
+    'zh-hans': 'zh-cn',
+    'zh_cn': 'zh-cn',
+    'zh_sg': 'zh-cn',
+
+    'zh-tw': 'zh-tw',
+    'zh-hant': 'zh-tw',
+    'zh-hk': 'zh-tw',
+    'zh_tw': 'zh-tw',
+    'zh_hk': 'zh-tw',
+
+    'ja': 'ja',
+    'ja-jp': 'ja',
+    'ja_jp': 'ja',
+    'jp': 'ja',
+    'jp-jp': 'ja',
+
+    'ko': 'ko',
+    'ko-kr': 'ko',
+    'ko_kr': 'ko',
+
+    'es': 'es',
+    'es-es': 'es',
+    'es-la': 'es',
+    'es_419': 'es',
+
+    'fr': 'fr',
+    'fr-fr': 'fr',
+    'fr_ca': 'fr',
+
+    'de': 'de',
+    'de-de': 'de',
+
+    'pt': 'pt',
+    'pt-pt': 'pt',
+    'pt-br': 'pt',
+    'pt_br': 'pt',
+
+    'ru': 'ru',
+    'ru-ru': 'ru'
+}
+
+SUPPORTED_LANGUAGE_CODES = {
+    'en',
+    'zh-cn',
+    'zh-tw',
+    'ja',
+    'ko',
+    'es',
+    'fr',
+    'de',
+    'pt',
+    'ru'
+}
+
+
+def _normalize_language_code(code: str | None) -> str | None:
+    if not code:
+        return None
+    normalized = code.strip().lower().replace('_', '-')
+    if not normalized:
+        return None
+    alias = LANGUAGE_ALIASES.get(normalized)
+    if alias:
+        return alias
+    if normalized in SUPPORTED_LANGUAGE_CODES:
+        return normalized
+    prefix = normalized.split('-', 1)[0]
+    if prefix and LANGUAGE_ALIASES.get(prefix):
+        return LANGUAGE_ALIASES[prefix]
+    return normalized
+
+
+def _effective_primary_language(request: ExplainRequest) -> str:
+    profile_language = None
+    if request.profile and getattr(request.profile, 'primaryLanguage', None):
+        profile_language = _normalize_language_code(request.profile.primaryLanguage)
+    request_language = _normalize_language_code(request.languages.primary) or request.languages.primary
+    return profile_language or request_language or 'en'
 
 
 def _quick_text_format() -> dict[str, Any]:
@@ -48,8 +142,12 @@ def _deep_text_format() -> dict[str, Any]:
             'schema': {
                 'type': 'object',
                 'additionalProperties': False,
-                'required': ['background', 'crossCulture', 'confidence', 'reasoningNotes'],
+                'required': ['lang', 'background', 'crossCulture', 'confidence', 'reasoningNotes'],
                 'properties': {
+                    'lang': {
+                        'type': 'string',
+                        'pattern': '^[a-z]{2}(?:-[A-Z]{2})?$'
+                    },
                     'background': {
                         'type': 'object',
                         'additionalProperties': False,
@@ -107,10 +205,14 @@ def _deep_text_format() -> dict[str, Any]:
 
 
 class OpenAIClient:
-    def __init__(self, base_url: str, api_key: str):
-        normalized_base = base_url.rstrip('/') if base_url.endswith('/') else base_url
+    def __init__(self, base_url: str, api_key: str, model_config: ModelConfig | None = None):
+        normalized_base = base_url.rstrip('/') if base_url and base_url.endswith('/') else base_url
+        if not normalized_base:
+            normalized_base = 'https://api.openai.com/v1'
         self._client = httpx.AsyncClient(base_url=normalized_base, timeout=15.0)
         self._api_key = api_key
+        self._model_config = model_config
+        self._base_url = normalized_base
 
     @classmethod
     async def create(
@@ -119,26 +221,74 @@ class OpenAIClient:
         base_url: str | None = None
     ) -> 'OpenAIClient':
         settings = get_settings()
-        key = (api_key or settings.openai_api_key or '').strip()
+        store = await ModelStore.create()
+        default_model = await store.get_default()
+
+        key = (api_key or '').strip()
+        base = (base_url or '').strip()
+
+        if default_model:
+            if not key and default_model.apiKey:
+                key = default_model.apiKey.strip()
+            if not base and default_model.baseUrl:
+                base = default_model.baseUrl.strip()
+
+        if not key:
+            key = (settings.openai_api_key or '').strip()
+        if not base:
+            base = settings.openai_base_url.strip() if settings.openai_base_url else ''
         if not key:
             raise RuntimeError('OpenAI API key is not configured on the server.')
-        base = (base_url or settings.openai_base_url).strip() or settings.openai_base_url
-        return cls(base, key)
+
+        return cls(base, key, model_config=default_model)
+
+    def _resolve_generation_params(
+        self,
+        fallback_model: str,
+        fallback_temperature: float,
+        fallback_max_tokens: int
+    ) -> tuple[str, float, int, float | None]:
+        config = self._model_config
+        if not config:
+            return fallback_model, fallback_temperature, fallback_max_tokens, None
+        model_name = config.model or fallback_model
+        temperature = (
+            fallback_temperature
+            if config.temperature is None
+            else config.temperature
+        )
+        max_tokens = (
+            fallback_max_tokens
+            if (config.maxTokens is None or config.maxTokens <= 0)
+            else config.maxTokens
+        )
+        top_p = config.topP
+        return model_name, temperature, max_tokens, top_p
 
     async def quick_explain(self, request: ExplainRequest) -> QuickExplainResponse:
         settings = get_settings()
+        primary_language = _effective_primary_language(request)
+        model_name, temperature, max_tokens, top_p = self._resolve_generation_params(
+            settings.openai_model_quick,
+            0.3,
+            512,
+        )
         payload = {
-            'model': settings.openai_model_quick,
+            'model': model_name,
             'input': self._build_prompt(request),
-            'temperature': 0.3,
-            'max_output_tokens': 512,
+            'temperature': temperature,
+            'max_output_tokens': max_tokens,
             'text': _quick_text_format()
         }
+        if top_p is not None:
+            payload['top_p'] = top_p
         print('[LinguaLens][Server] 准备请求快速解释', {
             '请求编号': request.requestId,
             '模型': payload['model'],
             '提示词前120字符': payload['input'][:120],
-            '最大输出token': payload['max_output_tokens']
+            '最大输出token': payload['max_output_tokens'],
+            '温度': payload['temperature'],
+            'Top P': payload.get('top_p')
         })
         response = await self._client.post(
             '/responses',
@@ -170,7 +320,7 @@ class OpenAIClient:
             requestId=request.requestId,
             literal=literal,
             context=context,
-            languages=request.languages,
+            languages=LanguagePair(primary=primary_language, secondary=None),
             detectedAt=now_ms,
             expiresAt=now_ms + ttl_ms
         )
@@ -182,18 +332,27 @@ class OpenAIClient:
         sources: list[SourceReference]
     ) -> DeepExplainResponse:
         settings = get_settings()
+        model_name, temperature, max_tokens, top_p = self._resolve_generation_params(
+            settings.openai_model_deep,
+            0.4,
+            720,
+        )
         payload = {
-            'model': settings.openai_model_deep,
+            'model': model_name,
             'input': self._build_deep_prompt(request, knowledge_base, sources),
-            'temperature': 0.4,
-            'max_output_tokens': 720,
+            'temperature': temperature,
+            'max_output_tokens': max_tokens,
             'text': _deep_text_format()
         }
+        if top_p is not None:
+            payload['top_p'] = top_p
         print('[LinguaLens][Server] 准备请求深度解释', {
             '请求编号': request.requestId,
             '模型': payload['model'],
             '提示词前120字符': payload['input'][:120],
             '最大输出token': payload['max_output_tokens'],
+            '温度': payload['temperature'],
+            'Top P': payload.get('top_p'),
             '知识库预览': knowledge_base[:120]
         })
         response = await self._client.post(
@@ -220,6 +379,20 @@ class OpenAIClient:
         })
         text = parse_output_text(raw_json)
         result = parse_deep_response(text)
+        lang_tag_raw = result.get('lang')
+        lang_tag = _normalize_language_code(lang_tag_raw) or ((lang_tag_raw or '').strip().lower() or None)
+        primary_language = _effective_primary_language(request)
+        primary_code = _normalize_language_code(primary_language) or primary_language.strip().lower()
+        if lang_tag and primary_code and lang_tag != primary_code:
+            logger.warning(
+                'Deep explain language mismatch: expected %s, got %s for request %s',
+                primary_code,
+                lang_tag,
+                request.requestId
+            )
+            raise RuntimeError(
+                f"Deep explain output language mismatch: expected '{primary_code}' but model returned '{lang_tag}'."
+            )
         return DeepExplainResponse(
             requestId=request.requestId,
             background=result['background'],
@@ -228,43 +401,53 @@ class OpenAIClient:
             confidence=result['confidence'],
             reasoningNotes=result.get('reasoningNotes'),
             profileId=request.profileId,
-            generatedAt=int(time() * 1000)
+            generatedAt=int(time() * 1000),
+            language=result.get('lang')
         )
 
     async def close(self) -> None:
         await self._client.aclose()
 
     def _build_prompt(self, request: ExplainRequest) -> str:
-        secondary = (
-            f"Secondary language: {request.languages.secondary}"
-            if request.languages.secondary
-            else "Secondary language: none"
-        )
+        primary_language = _effective_primary_language(request)
         profile_lines: list[str] = []
         if request.profile:
             demographics = request.profile.demographics
             profile_lines = [
                 f"User profile: {request.profile.name} (id: {request.profile.id})",
-                f"Primary language preference: {request.profile.primaryLanguage}",
+                f"Profile locale: {demographics.region}",
                 f"Cultural focus: {', '.join(request.profile.cultures) or 'none'}",
                 f"Demographics: age_range={demographics.ageRange}, region={demographics.region}, occupation={demographics.occupation}, gender={demographics.gender or 'unspecified'}",
                 f"Tone preference: {request.profile.tone}",
                 f"Personal preference: {request.profile.personalPreference or DEFAULT_PROFILE_PREFERENCE}",
                 f"Learning goals: {request.profile.goals or 'none specified'}",
                 f"Description: {request.profile.description}",
-                'Adjust literal/context to resonate with the profile while staying accurate and concise.'
+                f"Adjust literal/context to resonate with {request.profile.name} while staying accurate and concise.",
+                f"Use examples tied to {', '.join(request.profile.cultures) or 'their cultural background'} and relatable situations in {demographics.region}.",
+                f"Keep explanations aligned with the desired tone ({request.profile.tone}) and highlight implications relevant to {request.profile.goals or 'their learning goals'}."
             ]
-        return '\n'.join(
-            [
-                'You are LinguaLens Quick Explain.',
-                f"Primary language: {request.languages.primary}",
-                secondary,
-                f"Subtitle: {request.subtitleText}",
-                f"Context: {request.surrounding or 'n/a'}",
-                'Return JSON with literal and context fields.',
-                *profile_lines
-            ]
-        )
+        lines = [
+            'You are LinguaLens Quick Explain.',
+            f"Primary language: {primary_language}",
+            f"All output MUST be written in {primary_language}. This is the ONLY output language.",
+            "IGNORE any language hints from profiles, subtitles, knowledge base entries, or examples; they do NOT override the required output language.",
+            f"IMPORTANT: The literal field must be written entirely in {primary_language}; only quote other languages when repeating the original subtitle.",
+            f"IMPORTANT: The context field must be written entirely in {primary_language}. If you reference other languages, keep them in parentheses while the explanation remains in {primary_language}.",
+            "Before returning, re-read literal and context. If any portion is not natural in the primary language, translate or rewrite it until it is.",
+            f"If you cannot express an idea in {primary_language}, write the equivalent of 'translation unavailable' in {primary_language} instead of switching languages.",
+            f"Subtitle: {request.subtitleText}",
+            f"Context: {request.surrounding or 'n/a'}",
+            'Return JSON with literal and context fields.',
+            f"literal: provide a natural translation into {primary_language}.",
+            f"context: explain intent or tone in {primary_language}, concise and friendly, tailored to the profile's background and goals.",
+            *profile_lines,
+            (
+                'When cultural nuance or slang appears, compare it to a concept familiar to the profile.'
+                if request.profile
+                else 'When cultural nuance or slang appears, compare it to a widely understood concept.'
+            )
+        ]
+        return '\n'.join(line for line in lines if line)
 
     def _build_deep_prompt(
         self,
@@ -272,6 +455,7 @@ class OpenAIClient:
         knowledge_base: str,
         sources: list[SourceReference]
     ) -> str:
+        primary_language = _effective_primary_language(request)
         sources_text = '\n'.join(
             [f"- {source.title}: {source.excerpt} (credibility: {source.credibility})" for source in sources]
         )
@@ -291,43 +475,82 @@ class OpenAIClient:
         schema_instructions = [
             'Return JSON with the following schema (no markdown fences, no prose outside the JSON object):',
             '{',
+            '  "lang": string language tag for the whole output (use the primary language code, e.g., "ja"),',
             '  "background": {',
-            '    "summary": string,',
-            '    "detail": string (optional),',
-            '    "highlights": string[] (2-4 concise bullet insights)',
+            '    "summary": string (use the primary language),',
+            '    "detail": string (optional, primary language),',
+            '    "highlights": string[] (2-4 concise bullet insights in the primary language)',
             '  },',
             '  "crossCulture": [',
             '    {',
             '      "profileId": string,',
             '      "profileName": string,',
-            '      "headline": string (short cultural hook),',
-            '      "analogy": string (core explanation tailored to that culture),',
-            '      "context": string (optional cultural nuance),',
-            '      "notes": string (optional learning tip),',
+            '      "headline": string (short cultural hook, primary language or original quoted),',
+            '      "analogy": string (core explanation tailored to that culture, in the primary language),',
+            '      "context": string (optional cultural nuance, primary language),',
+            '      "notes": string (optional learning tip, primary language),',
             '      "confidence": "high" | "medium" | "low"',
             '    }',
             '  ],',
-            '  "confidence": { "level": "high" | "medium" | "low", "notes": string (optional) },',
-            '  "reasoningNotes": string (optional)',
-            '}'
+            '  "confidence": { "level": "high" | "medium" | "low", "notes": string (optional, primary language) },',
+            '  "reasoningNotes": string (optional, primary language)',
+            '}',
+            'Set "lang" to the primary language code (for example "ja" for Japanese).'
         ]
 
-        return '\n'.join(
+        schema_instructions.extend(
             [
-                'You are LinguaLens Deep Explain.',
-                f"Primary language: {request.languages.primary}",
-                f"Secondary language: {request.languages.secondary or 'none'}",
-                f"Subtitle: {request.subtitleText}",
-                f"Context: {request.surrounding or 'n/a'}",
-                'Profiles to address (return crossCulture entries for each profileId in the list):',
-                *profile_sections,
-                'Knowledge base snippets:',
-                knowledge_base,
-                'Sources:',
-                sources_text,
-                *schema_instructions
+                'Guidance for personalization:',
+                '- Anchor the background summary to the primary profile’s perspective, highlighting why the slang matters to them.',
+                '- For each crossCulture entry, weave in the listed profile’s tone, cultural references, and personal goals so the analogy feels bespoke.',
+                '- When offering notes, include practical tips or comparisons tied to each profile’s region or daily experiences.',
             ]
         )
+
+        personalization_guidelines: list[str] = [
+            'Personalization directives:',
+            '1. Keep the narrative clear and supportive, mirroring the requested tone.',
+            '2. If cultural nuance is ambiguous, clarify it with comparisons familiar to the listed profiles.',
+        ]
+        if request.profile:
+            demographics = request.profile.demographics
+            personalization_guidelines.append(
+                f"3. Emphasize takeaways that help {request.profile.name} ({demographics.region}) understand emotional subtext or etiquette around the slang."
+            )
+        if len(variant_profiles) > 1:
+            personalization_guidelines.append(
+                "4. Make crossCulture entries distinct—avoid repeating examples between profiles; address each persona’s unique background."
+            )
+
+        language_instructions = [
+            f"All narrative, summaries, and explanations MUST be written in {primary_language}.",
+            f"IMPORTANT: Every string in the JSON output MUST be exclusively in {primary_language}.",
+            "Do NOT copy knowledge base text verbatim if it is not in the primary language—paraphrase and translate it into the primary language.",
+            "IGNORE any language mentioned in profiles or sources; they do NOT change the output language.",
+            "Do NOT write full sentences in other languages. At most include a single quoted term in parentheses.",
+        ]
+        language_instructions.extend([
+            "Before returning the JSON, re-read every field (background, crossCulture, confidence, reasoningNotes). If any sentence is not natural in the primary language, translate or rewrite it until it is.",
+            "If a concept cannot be described in the primary language, replace the value with the primary-language equivalent of 'translation unavailable' instead of using another language."
+        ])
+
+        lines = [
+            'You are LinguaLens Deep Explain.',
+            f"Primary language: {primary_language}",
+            *[item for item in language_instructions if item],
+            f"Subtitle: {request.subtitleText}",
+            f"Context: {request.surrounding or 'n/a'}",
+            'Profiles to address (return crossCulture entries for each profileId in the list):',
+            *profile_sections,
+            'Knowledge base snippets:',
+            knowledge_base,
+            'Translate and paraphrase any knowledge base or source content into the primary language. Do NOT include long verbatim quotes in other languages.',
+            'Sources:',
+            sources_text,
+            *personalization_guidelines,
+            *schema_instructions
+        ]
+        return '\n'.join(lines)
 
 
 def parse_output_text(payload: Any) -> str:
@@ -508,6 +731,7 @@ def parse_deep_response(text: str) -> dict[str, Any]:
             formatted = _format_cross_culture_entry(entry)
             if formatted:
                 cross_entries.append(formatted)
+        lang_tag = _string_or_none(data.get('lang') or data.get('language'))
         confidence_level = _normalize_confidence(data.get('confidence'))
         confidence_meta = {
             'level': confidence_level,
@@ -515,6 +739,7 @@ def parse_deep_response(text: str) -> dict[str, Any]:
         }
         reasoning = _string_or_none(data.get('reasoningNotes') or data.get('reasoning'))
         return {
+            'lang': lang_tag,
             'background': background,
             'crossCulture': cross_entries,
             'confidence': confidence_meta,
@@ -522,6 +747,7 @@ def parse_deep_response(text: str) -> dict[str, Any]:
         }
     except Exception:
         return {
+            'lang': None,
             'background': _format_background(text),
             'crossCulture': [],
             'confidence': {'level': 'medium', 'notes': None},

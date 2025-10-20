@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .core.cache import get_cache
 from .core.config import get_settings
-from .routes import api_v1, collections, explain, profiles
+from .routes import api_v1, collections, explain, models, profiles
 
 
 def create_app() -> FastAPI:
@@ -28,6 +28,7 @@ def create_app() -> FastAPI:
         return {'status': 'ok'}
 
     app.include_router(explain.router)
+    app.include_router(models.router)
     app.include_router(profiles.router)
     app.include_router(collections.router)
     app.include_router(api_v1.router)

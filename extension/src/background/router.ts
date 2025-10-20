@@ -17,6 +17,7 @@ import { getApiKeys, saveApiKeys } from './keyStore.js';
 import { getActiveProfile } from './profileStore.js';
 import { recordQuickRequestEnd, recordQuickRequestStart } from './telemetry.js';
 import { normalizeProfileTemplate } from '../shared/profile.js';
+import { normalizeLanguageCode } from '../shared/languageCodes.js';
 import { SERVER_BASE } from '../shared/server.js';
 
 console.info('[LinguaLens][SW] 后台路由初始化完成');
@@ -59,8 +60,15 @@ async function processQuickExplain(
   });
   const activeProfile = await getActiveProfile();
   const profileId = payload.profileId ?? activeProfile?.id;
+  const profilePrimary = normalizeLanguageCode(activeProfile?.primaryLanguage);
+  const payloadPrimary = normalizeLanguageCode(payload.languages.primary);
+  const primaryLanguage = profilePrimary ?? payloadPrimary ?? 'en';
+  const languages = {
+    primary: primaryLanguage
+  };
   const effectivePayload = {
     ...payload,
+    languages,
     profileId,
     profile: activeProfile ?? undefined
   };
@@ -135,8 +143,15 @@ async function processDeepExplain(
   });
   const activeProfile = await getActiveProfile();
   const profileId = payload.profileId ?? activeProfile?.id;
+  const profilePrimary = normalizeLanguageCode(activeProfile?.primaryLanguage);
+  const payloadPrimary = normalizeLanguageCode(payload.languages.primary);
+  const primaryLanguage = profilePrimary ?? payloadPrimary ?? 'en';
+  const languages = {
+    primary: primaryLanguage
+  };
   const effectivePayload = {
     ...payload,
+    languages,
     profileId,
     profile: activeProfile ?? undefined
   };

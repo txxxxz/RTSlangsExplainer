@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { ProfileTemplate } from '../shared/types.js';
 import { DEFAULT_PROFILE_TONE } from '../shared/profile.js';
+import {
+  LANGUAGE_OPTIONS,
+  SUPPORTED_LANGUAGE_CODES,
+  normalizeLanguageCode
+} from '../shared/languageCodes.js';
 
 interface ProfileFormProps {
   profiles: ProfileTemplate[];
@@ -28,7 +33,8 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [primaryLanguage, setPrimaryLanguage] = useState('en');
-  const [cultures, setCultures] = useState('US,UK');
+  const [languageNotice, setLanguageNotice] = useState<string | null>(null);
+  const [cultures, setCultures] = useState('US');
   const [ageRange, setAgeRange] = useState('18-25');
   const [gender, setGender] = useState('');
   const [region, setRegion] = useState('');
@@ -120,6 +126,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setName('');
     setDescription('');
     setPrimaryLanguage('en');
+    setLanguageNotice(null);
     setCultures('US,UK');
     setAgeRange('18-25');
     setGender('');
@@ -141,7 +148,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setEditingCreatedAt(profile.createdAt);
     setName(profile.name);
     setDescription(profile.description);
-    setPrimaryLanguage(profile.primaryLanguage);
+    const normalizedLanguage = normalizeLanguageCode(profile.primaryLanguage);
+    if (normalizedLanguage) {
+      setPrimaryLanguage(normalizedLanguage);
+      setLanguageNotice(null);
+    } else {
+      setPrimaryLanguage('en');
+      setLanguageNotice(
+        'The existing profile language is not supported. Please choose one of the supported languages below.'
+      );
+    }
     setCultures(profile.cultures.join(', '));
     const age = profile.demographics?.ageRange ?? '';
     setAgeRange(age);
@@ -197,6 +213,11 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     if (!canSubmit) {
       return;
     }
+    const normalizedLanguage = normalizeLanguageCode(primaryLanguage) ?? 'en';
+    if (!SUPPORTED_LANGUAGE_CODES.has(normalizedLanguage)) {
+      setFormError('Please select a supported primary language.');
+      return;
+    }
 
     try {
       setFormError(null);
@@ -220,7 +241,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
         id,
         name: name.trim(),
         description: description.trim(),
-        primaryLanguage: primaryLanguage.trim(),
+        primaryLanguage: normalizedLanguage,
         cultures: cultureTags,
         demographics,
         personalPreference: personalPreference.trim() || undefined,
@@ -327,12 +348,28 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       />
 
       <label htmlFor="primaryLanguage">Primary Language</label>
-      <input
+      <select
         id="primaryLanguage"
         value={primaryLanguage}
-        onChange={(event) => setPrimaryLanguage(event.target.value)}
-        placeholder="en"
-      />
+        onChange={(event) => {
+          setPrimaryLanguage(event.target.value);
+          setLanguageNotice(null);
+          if (formError) {
+            setFormError(null);
+          }
+        }}
+        required
+      >
+        {LANGUAGE_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <p className="profile-form__hint">
+        Supported languages: {LANGUAGE_OPTIONS.map((option) => option.label).join(', ')}.
+      </p>
+      {languageNotice && <p className="profile-form__warning">{languageNotice}</p>}
 
       <label htmlFor="cultures">Culture Tags (comma separated)</label>
       <input

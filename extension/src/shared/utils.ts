@@ -1,3 +1,5 @@
+import { normalizeLanguageCode } from './languageCodes.js';
+
 export function debounce<T extends (...args: unknown[]) => void>(fn: T, delay: number) {
   let timeout: number | undefined;
   return (...args: Parameters<T>) => {
@@ -15,6 +17,6 @@ export function computeCacheKey(text: string, profileId?: string) {
 }
 
 export function safeParseLanguage(language?: string) {
-  if (!language) return 'en';
-  return language.toLowerCase();
+  const normalized = normalizeLanguageCode(language);
+  return normalized ?? 'en';
 }

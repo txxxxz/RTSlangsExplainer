@@ -110,6 +110,12 @@ button.danger {
   font-weight: 600;
 }
 
+.profile-form__warning {
+  margin: 0 0 12px;
+  color: #b45309;
+  font-size: 13px;
+}
+
 .profile-summary__secondary {
   background: transparent;
   border: none;

@@ -32,6 +32,12 @@ uvicorn app.main:app --reload --log-level debug
 
 The server expects Redis at `redis://localhost:6379/0` and a populated Chroma/FAISS index under `./data/vector`. Use `python scripts/build_index.py data/slang.json` to ingest datasets.
 
+### Custom Models
+
+- Manage model API credentials and generation preferences from the in-player settings drawer (`Models` tab). Configurations are stored in SQLite (`data/profiles.db`) via the FastAPI backend.
+- Backend endpoints: `GET /models`, `POST /models`, `POST /models/default`, and `DELETE /models/{id}` for CRUD + default selection.
+- The FastAPI OpenAI client automatically falls back to the persisted default model (base URL, API key, and tuning parameters) when request headers do not provide overrides.
+
 Run tests with:
 
 ```bash
