@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsup --watch --env.NODE_ENV=development",
     "build": "tsup && node scripts/copy-static.mjs",
+    "package": "npm run build && web-ext build --source-dir ./dist --artifacts-dir ./artifacts --overwrite-dest",
     "lint": "eslint --ext .ts,.tsx src",
     "test:e2e": "playwright test"
   },
