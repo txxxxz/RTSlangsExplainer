@@ -10,7 +10,7 @@ from ..schemas.profile import ProfileTemplate
 
 DB_DIR = Path(__file__).resolve().parents[3] / 'data'
 DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DB_DIR / '/Users/txxxxz/Desktop/StarOrbit/hackson/RTSlangsExpainer/data/profiles.db'
+DB_PATH = DB_DIR / 'data/profiles.db'
 
 
 class ProfileRepository:
