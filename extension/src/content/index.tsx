@@ -165,8 +165,15 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
           typeof window !== 'undefined' ? window.innerWidth : rect.left + rect.width;
         const viewportHeight =
           typeof window !== 'undefined' ? window.innerHeight : rect.top + rect.height;
-        const left = Math.min(rect.left + rect.width + 16, viewportWidth - 56);
-        const top = Math.min(Math.max(rect.top + rect.height / 2, 80), viewportHeight - 120);
+        const videoElement = document.querySelector('video');
+        if (videoElement) {
+          const videoRect = videoElement.getBoundingClientRect();
+          const left = videoRect.right - 32;
+          const top = videoRect.top + videoRect.height / 2;
+          return { left, top };
+        }
+        const left = viewportWidth - 56;
+        const top = viewportHeight / 2;
         return { left, top };
       },
       []

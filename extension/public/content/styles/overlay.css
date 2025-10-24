@@ -5,6 +5,7 @@
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   color: #0f172a;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .lingualens-root .hidden {
@@ -25,8 +26,8 @@
 }
 
 .lingualens-settings-modal {
-  width: min(720px, 92vw);
-  max-height: 88vh;
+  width: min(720px, 90vw);
+  max-height: 85vh;
   background: #ffffff;
   border-radius: 20px;
   box-shadow: 0 28px 64px rgba(15, 23, 42, 0.25);
@@ -35,6 +36,7 @@
   flex-direction: column;
   gap: 16px;
   border: 1px solid rgba(148, 163, 184, 0.32);
+  overflow: hidden;
 }
 
 .lingualens-settings-modal header {
@@ -112,7 +114,9 @@
 .lingualens-settings-modal section {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
+  min-height: 0;
 }
 
 .lingualens-settings-modal select,
@@ -202,13 +206,14 @@
 
 .lingualens-toast-stack {
   position: fixed;
-  top: 32px;
-  right: 32px;
+  top: min(32px, 4vh);
+  right: min(32px, 4vw);
   display: flex;
   flex-direction: column;
   gap: 12px;
   z-index: 2147483647;
   pointer-events: none;
+  max-width: 90vw;
 }
 
 .lingualens-toast-stack .toast {
@@ -218,6 +223,8 @@
   color: #ffffff;
   background: rgba(37, 99, 235, 0.9);
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.28);
+  word-wrap: break-word;
+  max-width: 100%;
 }
 
 .lingualens-toast-stack .toast-success {
@@ -299,11 +306,11 @@
 
 .lingualens-trigger {
   position: absolute;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: none;
-  background: rgba(37, 99, 235, 0.92);
+  background: rgba(33, 121, 164, 0.95);
   color: #fff;
   font-size: 18px;
   font-weight: 600;
@@ -311,9 +318,16 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+  box-shadow: 0 8px 20px rgba(33, 121, 164, 0.4);
   transform: translate(-50%, -50%);
   pointer-events: auto;
+  transition: all 0.2s ease;
+}
+
+.lingualens-trigger:hover:not(:disabled) {
+  background: rgba(33, 121, 164, 1);
+  box-shadow: 0 12px 28px rgba(33, 121, 164, 0.5);
+  transform: translate(-50%, -50%) scale(1.05);
 }
 
 .lingualens-trigger:disabled {
@@ -321,11 +335,17 @@
   cursor: progress;
 }
 
+.lingualens-trigger svg {
+  width: 24px;
+  height: 24px;
+}
+
 .lingualens-bubble {
-  position: absolute;
-  right: 24px;
-  bottom: 72px;
-  width: 340px;
+  position: fixed;
+  right: min(24px, 2vw);
+  bottom: min(72px, 10vh);
+  width: min(360px, 90vw);
+  max-height: 80vh;
   background: linear-gradient(165deg, rgba(255, 255, 255, 0.98) 0%, rgba(241, 245, 249, 0.94) 100%);
   backdrop-filter: blur(6px);
   border-radius: 18px;
@@ -336,6 +356,7 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
 }
 
 .lingualens-bubble .bubble-header {
@@ -520,16 +541,18 @@
   position: fixed;
   top: 0;
   right: 0;
-  width: 420px;
+  width: min(420px, 90vw);
   height: 100vh;
+  max-height: 100vh;
   background: linear-gradient(165deg, #ffffff 0%, #f1f5f9 100%);
   box-shadow: -32px 0 64px rgba(15, 23, 42, 0.18);
-  padding: 28px 28px calc(24px + env(safe-area-inset-bottom, 12px));
+  padding: 24px 20px calc(20px + env(safe-area-inset-bottom, 12px));
   border-left: 1px solid rgba(148, 163, 184, 0.24);
   display: flex;
   flex-direction: column;
   gap: 20px;
   pointer-events: auto;
+  overflow-y: auto;
 }
 
 .lingualens-drawer .drawer-header {
@@ -629,10 +652,12 @@
 .lingualens-drawer .drawer-content {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 4px;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
 }
 
 .drawer-panel {
@@ -786,6 +811,7 @@
   justify-content: center;
   padding-top: 12px;
   border-top: 1px solid rgba(148, 163, 184, 0.25);
+  margin-bottom: 48px;
 }
 
 .lingualens-drawer .drawer-footer .profile-button {
@@ -1433,4 +1459,53 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+/* 响应式布局优化 */
+@media (max-width: 768px) {
+  .lingualens-bubble {
+    width: min(320px, 92vw);
+    right: 4vw;
+    bottom: 8vh;
+  }
+
+  .lingualens-drawer {
+    width: 100vw;
+    padding: 20px 16px;
+  }
+
+  .lingualens-settings-modal {
+    width: 95vw;
+    max-height: 90vh;
+    padding: 16px;
+  }
+
+  .profile-cards,
+  .lingualens-settings-modal .profile-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .field-grid,
+  .lingualens-settings-modal .field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .models-layout {
+    flex-direction: column;
+  }
+
+  .models-layout aside {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+@media (max-height: 600px) {
+  .lingualens-bubble {
+    max-height: 70vh;
+  }
+
+  .lingualens-settings-modal {
+    max-height: 90vh;
+  }
 }

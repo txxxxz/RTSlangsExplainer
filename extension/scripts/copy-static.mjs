@@ -30,5 +30,19 @@ async function copyPublic() {
   }
 }
 
+async function copyImg() {
+  const source = join(root, 'img');
+  const target = join(dist, 'img');
+  try {
+    await ensureDir(target);
+    await cp(source, target, { recursive: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return;
+    }
+    throw error;
+  }
+}
+
 await ensureDir(dist);
-await Promise.all([copyManifest(), copyPublic()]);
+await Promise.all([copyManifest(), copyPublic(), copyImg()]);
