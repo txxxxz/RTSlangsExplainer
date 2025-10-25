@@ -10,12 +10,13 @@ from ..schemas.profile import ProfileTemplate
 
 DB_DIR = Path(__file__).resolve().parents[3] / 'data'
 DB_DIR.mkdir(parents=True, exist_ok=True)
-DB_PATH = DB_DIR / 'data/profiles.db'
+DB_PATH = DB_DIR / 'profiles.db'
 
 
 class ProfileRepository:
     def __init__(self, db_path: Optional[Path] = None) -> None:
         self._path = Path(db_path or DB_PATH)
+        self._path.parent.mkdir(parents=True, exist_ok=True)
         self._ensure_schema()
 
     def _get_connection(self) -> sqlite3.Connection:
