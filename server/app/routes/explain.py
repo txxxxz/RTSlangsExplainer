@@ -108,13 +108,15 @@ async def post_deep_explain(request: ExplainRequest, http_request: Request) -> S
         try:
             urban_sources = await fetch_urban_dictionary(request.subtitleText)
             online_sources.extend(urban_sources)
-        except Exception:
-            pass
+            print(f'[LinguaLens] Urban Dictionary 返回 {len(urban_sources)} 个来源')
+        except Exception as exc:
+            print(f'[LinguaLens] Urban Dictionary 调用失败: {exc}')
         try:
             wiki_sources = await fetch_wikipedia_summary(request.subtitleText)
             online_sources.extend(wiki_sources)
-        except Exception:
-            pass
+            print(f'[LinguaLens] Wikipedia 返回 {len(wiki_sources)} 个来源')
+        except Exception as exc:
+            print(f'[LinguaLens] Wikipedia 调用失败: {exc}')
 
     merged_sources = rank_sources(merge_sources(rag_sources, online_sources))
     if not merged_sources:

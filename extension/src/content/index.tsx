@@ -296,7 +296,15 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
         switch (message.type) {
           case 'DEEP_EXPLAIN_READY':
             if (message.payload.requestId !== lastRequestId) return;
-            setDeepData(message.payload);
+            setDeepData((prev) => {
+              // Merge with previous progress data (which may include sources sent earlier)
+              const merged = { ...(prev ?? {}), ...message.payload };
+              // Preserve sources from progress if complete payload doesn't have them
+              if (prev?.sources?.length && (!message.payload.sources || message.payload.sources.length === 0)) {
+                merged.sources = prev.sources;
+              }
+              return merged;
+            });
             setDeepLoading(false);
             break;
           case 'DEEP_EXPLAIN_PROGRESS':

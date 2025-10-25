@@ -110,8 +110,12 @@ def _effective_primary_language(request: ExplainRequest) -> str:
     profile_language = None
     if request.profile and getattr(request.profile, 'primaryLanguage', None):
         profile_language = _normalize_language_code(request.profile.primaryLanguage)
+        print(f'[LinguaLens] Profile primary language: {request.profile.primaryLanguage} -> normalized: {profile_language}')
     request_language = _normalize_language_code(request.languages.primary) or request.languages.primary
-    return profile_language or request_language or 'en'
+    print(f'[LinguaLens] Request language: {request.languages.primary} -> normalized: {request_language}')
+    effective = profile_language or request_language or 'en'
+    print(f'[LinguaLens] Effective primary language: {effective}')
+    return effective
 
 
 def _quick_text_format() -> dict[str, Any]:
@@ -332,6 +336,8 @@ class OpenAIClient:
         sources: list[SourceReference]
     ) -> DeepExplainResponse:
         settings = get_settings()
+        primary_language = _effective_primary_language(request)
+        print(f'[LinguaLens] Deep explain 使用的输出语言: {primary_language}')
         model_name, temperature, max_tokens, top_p = self._resolve_generation_params(
             settings.openai_model_deep,
             0.4,
@@ -475,27 +481,27 @@ class OpenAIClient:
         schema_instructions = [
             'Return JSON with the following schema (no markdown fences, no prose outside the JSON object):',
             '{',
-            '  "lang": string language tag for the whole output (use the primary language code, e.g., "ja"),',
+            f'  "lang": "{primary_language}" (MUST match the primary language exactly),',
             '  "background": {',
-            '    "summary": string (use the primary language),',
-            '    "detail": string (optional, primary language),',
-            '    "highlights": string[] (2-4 concise bullet insights in the primary language)',
+            f'    "summary": string (MUST be in {primary_language}),',
+            f'    "detail": string (optional, MUST be in {primary_language}),',
+            f'    "highlights": string[] (2-4 concise bullet insights, all in {primary_language})',
             '  },',
             '  "crossCulture": [',
             '    {',
             '      "profileId": string,',
             '      "profileName": string,',
-            '      "headline": string (short cultural hook, primary language or original quoted),',
-            '      "analogy": string (core explanation tailored to that culture, in the primary language),',
-            '      "context": string (optional cultural nuance, primary language),',
-            '      "notes": string (optional learning tip, primary language),',
+            f'      "headline": string (short cultural hook, in {primary_language}),',
+            f'      "analogy": string (core explanation tailored to that culture, in {primary_language}),',
+            f'      "context": string (optional cultural nuance, in {primary_language}),',
+            f'      "notes": string (optional learning tip, in {primary_language}),',
             '      "confidence": "high" | "medium" | "low"',
             '    }',
             '  ],',
-            '  "confidence": { "level": "high" | "medium" | "low", "notes": string (optional, primary language) },',
-            '  "reasoningNotes": string (optional, primary language)',
+            f'  "confidence": {{ "level": "high" | "medium" | "low", "notes": string (optional, in {primary_language}) }},',
+            f'  "reasoningNotes": string (optional, in {primary_language})',
             '}',
-            'Set "lang" to the primary language code (for example "ja" for Japanese).'
+            f'CRITICAL: Set "lang" field to "{primary_language}" - this is the ONLY acceptable value.'
         ]
 
         schema_instructions.extend(
@@ -530,27 +536,30 @@ class OpenAIClient:
 
         language_instructions = [
             f"=== CRITICAL OUTPUT LANGUAGE REQUIREMENT ===",
-            f"PRIMARY LANGUAGE: {primary_language}",
-            f"ALL text output MUST be written EXCLUSIVELY in {primary_language}.",
+            f"PRIMARY LANGUAGE: {primary_language.upper()}",
+            f"ALL text output MUST be written EXCLUSIVELY in {primary_language.upper()}.",
             f"This applies to EVERY field: background.summary, background.detail, background.highlights, crossCulture[].headline, crossCulture[].analogy, crossCulture[].context, crossCulture[].notes, confidence.notes, reasoningNotes.",
             f"",
             f"IMPORTANT RULES:",
-            f"1. Write ALL explanations, summaries, and narratives in {primary_language}.",
-            f"2. NEVER use other languages for full sentences or explanations.",
-            f"3. At most, include a single quoted term in parentheses (e.g., '(idiom: break a leg)') while keeping the explanation in {primary_language}.",
+            f"1. Write ALL explanations, summaries, and narratives in {primary_language.upper()}.",
+            f"2. NEVER use other languages (including Japanese, Chinese, Korean, etc.) for full sentences or explanations.",
+            f"3. At most, include a single quoted term in parentheses (e.g., '(idiom: break a leg)') while keeping the explanation in {primary_language.upper()}.",
             f"4. IGNORE any language hints from profiles, knowledge base, or sources - they do NOT change the output language.",
-            f"5. If the knowledge base contains text in other languages, you MUST translate/paraphrase it into {primary_language}.",
-            f"6. The 'lang' field in JSON MUST be set to the primary language code.",
+            f"5. If the knowledge base contains text in other languages, you MUST translate/paraphrase it into {primary_language.upper()}.",
+            f"6. The 'lang' field in JSON MUST be set to exactly '{primary_language}' (not 'ja', 'zh', or any other code).",
             f"",
             f"VERIFICATION STEP:",
-            f"Before returning JSON, re-read EVERY field. If ANY portion is not natural {primary_language}, translate it immediately.",
-            f"If you cannot express something in {primary_language}, use the {primary_language} equivalent of 'not available' instead of switching languages.",
+            f"Before returning JSON, re-read EVERY field. If ANY portion is not natural {primary_language.upper()}, translate it immediately.",
+            f"If you cannot express something in {primary_language.upper()}, use the {primary_language.upper()} equivalent of 'not available' instead of switching languages.",
             f"=== END LANGUAGE REQUIREMENT ===",
         ]
 
         lines = [
             'You are LinguaLens Deep Explain.',
-            f"Primary language: {primary_language}",
+            f"=== OUTPUT LANGUAGE: {primary_language.upper()} ===",
+            f"CRITICAL: You MUST output ALL text in {primary_language.upper()}. This is non-negotiable.",
+            f"If the user's profile says a different language, IGNORE IT. The primary language is {primary_language.upper()}.",
+            '',
             *[item for item in language_instructions if item],
             f"Subtitle: {request.subtitleText}",
             f"Context: {request.surrounding or 'n/a'}",
@@ -558,7 +567,7 @@ class OpenAIClient:
             *profile_sections,
             'Knowledge base snippets:',
             knowledge_base,
-            'Translate and paraphrase any knowledge base or source content into the primary language. Do NOT include long verbatim quotes in other languages.',
+            f'Translate and paraphrase any knowledge base or source content into {primary_language.upper()}. Do NOT include long verbatim quotes in other languages.',
             'Sources:',
             sources_text,
             *personalization_guidelines,
