@@ -6,6 +6,7 @@ import {
   SUPPORTED_LANGUAGE_CODES,
   normalizeLanguageCode
 } from '../shared/languageCodes.js';
+import { STORAGE_KEYS, storageRemove } from '../shared/storage.js';
 
 interface ProfileFormProps {
   profiles: ProfileTemplate[];
@@ -15,6 +16,8 @@ interface ProfileFormProps {
   onSetActive(profile: ProfileTemplate): Promise<void> | void;
   onReturnToExplain?(): void;
   onRefreshProfiles?(): Promise<void> | void;
+  externalView?: 'list' | 'edit';
+  onExternalViewChange?: (view: 'list' | 'edit') => void;
 }
 
 type ViewMode = 'form' | 'success' | 'list' | 'detail';
@@ -26,9 +29,14 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   onDelete,
   onSetActive,
   onReturnToExplain,
-  onRefreshProfiles
+  onRefreshProfiles,
+  externalView,
+  onExternalViewChange
 }) => {
-  const [viewMode, setViewMode] = useState<ViewMode>(profiles.length ? 'list' : 'form');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (externalView === 'list') return 'list';
+    return profiles.length ? 'list' : 'form';
+  });
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -184,6 +192,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setSelectedProfileId(null);
     setLastSavedProfileId(null);
     setFormError(null);
+    onExternalViewChange?.('edit');
   };
 
   useEffect(() => {
@@ -195,12 +204,16 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   useEffect(() => {
     if (profiles.length > 0 && !hasInitializedListView.current) {
       hasInitializedListView.current = true;
-      setViewMode((previous) => (previous === 'form' ? 'list' : previous));
+      if (externalView === 'list') {
+        setViewMode('list');
+      } else {
+        setViewMode((previous) => (previous === 'form' ? 'list' : previous));
+      }
     }
     if (profiles.length === 0) {
       hasInitializedListView.current = false;
     }
-  }, [profiles.length]);
+  }, [profiles.length, externalView]);
 
   useEffect(() => {
     if (viewMode === 'detail' && selectedProfileId && !selectedProfile) {
@@ -214,6 +227,15 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       setLastSavedProfileId(null);
     }
   }, [lastSavedProfileId, lastSavedProfile]);
+
+  useEffect(() => {
+    if (!externalView) return;
+    if (externalView === 'list' && viewMode !== 'list' && viewMode !== 'detail') {
+      setViewMode('list');
+    } else if (externalView === 'edit' && viewMode === 'list') {
+      startNewProfile();
+    }
+  }, [externalView]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -286,6 +308,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       void onRefreshProfiles();
     }
     setFormError(null);
+    onExternalViewChange?.('list');
   };
 
   const handleBackToExplain = () => {
@@ -295,6 +318,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     setViewMode('list');
     setSelectedProfileId(null);
     setFormError(null);
+    onExternalViewChange?.('list');
   };
 
   const handleSelectProfileCard = (profile: ProfileTemplate) => {
@@ -315,6 +339,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
   const handleEditProfile = (profile: ProfileTemplate) => {
     loadProfileIntoForm(profile);
+    onExternalViewChange?.('edit');
   };
 
   const handleDeleteProfile = async (profile: ProfileTemplate) => {
@@ -326,6 +351,20 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       setLastSavedProfileId(null);
     }
     setViewMode('list');
+    onExternalViewChange?.('list');
+  };
+
+  const handleDeactivateProfile = async () => {
+    try {
+      await storageRemove(STORAGE_KEYS.activeProfile);
+      // Optionally notify parent component or refresh
+      if (onRefreshProfiles) {
+        await onRefreshProfiles();
+      }
+      // Stay on detail view but the button will now show "Set Active"
+    } catch (error) {
+      console.error('Failed to deactivate profile:', error);
+    }
   };
 
   const renderForm = () => (
@@ -692,9 +731,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           <button type="button" className="primary" onClick={startNewProfile} disabled={!canAddProfile}>
             Add Profile
           </button>
-          <button type="button" className="profile-summary__secondary" onClick={handleBackToExplain}>
-            Back
-          </button>
+          
         </div>
       </div>
       {profiles.length === 0 ? (
@@ -801,15 +838,25 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
           )}
         </dl>
         <div className="profile-detail__actions">
-          <button
-            type="button"
-            className="primary"
-            onClick={() => {
-              void onSetActive(selectedProfile);
-            }}
-          >
-            Set Active
-          </button>
+          {selectedProfile.id === activeProfileId ? (
+            <button
+              type="button"
+              className="primary outline"
+              onClick={handleDeactivateProfile}
+            >
+              Deactivate
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                void onSetActive(selectedProfile);
+              }}
+            >
+              Set Active
+            </button>
+          )}
           <button
             type="button"
             className="primary outline"

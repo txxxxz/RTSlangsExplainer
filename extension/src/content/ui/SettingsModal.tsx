@@ -31,18 +31,23 @@ const TABS: SettingsTabKey[] = ['history', 'profiles', 'models'];
 export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTab = 'history' }) => {
   const [activeTab, setActiveTab] = useState<SettingsTabKey>(initialTab);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [profileView, setProfileView] = useState<'list' | 'edit'>('list');
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        if (activeTab === 'profiles' && profileView === 'edit') {
+          setProfileView('list');
+        } else {
+          onClose();
+        }
       }
     };
     document.addEventListener('keydown', handleKey);
     return () => {
       document.removeEventListener('keydown', handleKey);
     };
-  }, [onClose]);
+  }, [onClose, activeTab, profileView]);
 
   const notify = useCallback<ToastHandler>((kind, message) => {
     const id = Date.now();
@@ -52,18 +57,25 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTa
     }, 2600);
   }, []);
 
+  const handleTabChange = useCallback((tab: SettingsTabKey) => {
+    if (tab === 'profiles') {
+      setProfileView('list');
+    }
+    setActiveTab(tab);
+  }, []);
+
   const tabContent = useMemo(() => {
     switch (activeTab) {
       case 'history':
         return <HistoryTab onNotify={notify} />;
       case 'profiles':
-        return <ProfilesTab onNotify={notify} />;
+        return <ProfilesTab onNotify={notify} view={profileView} onViewChange={setProfileView} />;
       case 'models':
         return <ModelsTab onNotify={notify} />;
       default:
         return null;
     }
-  }, [activeTab, notify]);
+  }, [activeTab, notify, profileView]);
 
   return (
     <div className="lingualens-settings-backdrop" role="presentation" onClick={onClose}>
@@ -86,7 +98,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ onClose, initialTa
               key={tab}
               type="button"
               className={activeTab === tab ? 'active' : ''}
-              onClick={() => setActiveTab(tab)}
+              onClick={() => handleTabChange(tab)}
             >
               {TAB_LABELS[tab]}
             </button>

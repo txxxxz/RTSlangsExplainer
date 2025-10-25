@@ -8,9 +8,11 @@ import type { ToastHandler } from '../SettingsModal.js';
 
 interface ProfilesTabProps {
   onNotify: ToastHandler;
+  view?: 'list' | 'edit';
+  onViewChange?: (view: 'list' | 'edit') => void;
 }
 
-export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
+export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify, view, onViewChange }) => {
   const [profiles, setProfiles] = useState<ProfileTemplate[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(false);
@@ -146,6 +148,8 @@ export const ProfilesTab: React.FC<ProfilesTabProps> = ({ onNotify }) => {
         onDelete={handleDelete}
         onSetActive={handleSetActive}
         onRefreshProfiles={refreshProfiles}
+        externalView={view}
+        onExternalViewChange={onViewChange}
       />
     </div>
   );
