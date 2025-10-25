@@ -134,9 +134,54 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
   styleEl.href = styleHref;
   document.head.appendChild(styleEl);
 
-  const container = document.createElement('div');
+  // Create container and append to body initially
+  let container = document.createElement('div');
   container.className = 'lingualens-root';
   document.body.appendChild(container);
+
+  // Function to ensure container is in the right place
+  const ensureContainerPosition = () => {
+    const fullscreenElement = 
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement;
+
+    if (fullscreenElement && fullscreenElement !== document.documentElement) {
+      // If in fullscreen and it's not the whole document, move container to fullscreen element
+      if (!fullscreenElement.contains(container)) {
+        fullscreenElement.appendChild(container);
+      }
+    } else {
+      // If not in fullscreen or fullscreen is whole document, ensure container is in body
+      if (!document.body.contains(container)) {
+        document.body.appendChild(container);
+      }
+    }
+  };
+
+  // Listen to fullscreen changes to reposition container
+  const handleFullscreenChange = () => {
+    ensureContainerPosition();
+  };
+
+  document.addEventListener('fullscreenchange', handleFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+  document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+  document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+  // Watch for container removal and re-attach if needed
+  const containerObserver = new MutationObserver(() => {
+    ensureContainerPosition();
+  });
+
+  containerObserver.observe(document.body, {
+    childList: true,
+    subtree: false
+  });
+
+  // Initial check
+  ensureContainerPosition();
 
   const Overlay: React.FC = () => {
     const [currentLine, setCurrentLine] = useState('');
@@ -161,17 +206,40 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
     const computeTriggerPosition = useCallback(
       (rect?: SubtitleObservation['rect']): { left: number; top: number } | null => {
         if (!rect) return null;
-        const viewportWidth =
-          typeof window !== 'undefined' ? window.innerWidth : rect.left + rect.width;
-        const viewportHeight =
-          typeof window !== 'undefined' ? window.innerHeight : rect.top + rect.height;
+        
+        // Check if we're in fullscreen mode
+        const fullscreenElement = 
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement ||
+          (document as any).mozFullScreenElement ||
+          (document as any).msFullscreenElement;
+        
+        const isFullscreen = !!fullscreenElement;
+        
+        // Get the actual visible viewport dimensions
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
         const videoElement = document.querySelector('video');
         if (videoElement) {
           const videoRect = videoElement.getBoundingClientRect();
-          const left = videoRect.right - 32;
-          const top = videoRect.top + videoRect.height / 2;
-          return { left, top };
+          
+          // In fullscreen, use a fixed position relative to viewport
+          // Otherwise, position relative to the video element
+          if (isFullscreen) {
+            // Position in the right center of the screen in fullscreen
+            const left = viewportWidth - 64;
+            const top = viewportHeight / 2;
+            return { left, top };
+          } else {
+            // Normal mode: position relative to video
+            const left = videoRect.right - 32;
+            const top = videoRect.top + videoRect.height / 2;
+            return { left, top };
+          }
         }
+        
+        // Fallback position
         const left = viewportWidth - 56;
         const top = viewportHeight / 2;
         return { left, top };
@@ -272,9 +340,23 @@ if (!IS_TOP_FRAME || !RUNTIME_AVAILABLE) {
           setTriggerPosition(computeTriggerPosition(lastRect));
         }
       };
+      const handleFullscreenChange = () => {
+        // Recalculate position when entering/exiting fullscreen
+        if (lastRect) {
+          setTriggerPosition(computeTriggerPosition(lastRect));
+        }
+      };
       window.addEventListener('resize', handleResize);
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.addEventListener('MSFullscreenChange', handleFullscreenChange);
       return () => {
         window.removeEventListener('resize', handleResize);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
       };
     }, [lastRect, computeTriggerPosition]);
 

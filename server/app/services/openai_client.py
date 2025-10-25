@@ -501,9 +501,11 @@ class OpenAIClient:
         schema_instructions.extend(
             [
                 'Guidance for personalization:',
-                '- Anchor the background summary to the primary profile’s perspective, highlighting why the slang matters to them.',
-                '- For each crossCulture entry, weave in the listed profile’s tone, cultural references, and personal goals so the analogy feels bespoke.',
-                '- When offering notes, include practical tips or comparisons tied to each profile’s region or daily experiences.',
+                '- Anchor the background summary to the primary profile\'s perspective, highlighting why the slang matters to them.',
+                '- For each crossCulture entry, weave in the listed profile\'s tone, cultural references, and personal goals so the analogy feels bespoke.',
+                f'- CRITICAL: For each profile, use their specific culture tags (listed in "cultures" field) to create analogies. If a profile has cultures="US,UK", draw comparisons to US and UK cultural references that person would understand.',
+                '- Make analogies culture-specific: reference movies, idioms, social norms, or everyday scenarios from EACH profile\'s listed cultures.',
+                '- When offering notes, include practical tips or comparisons tied to each profile\'s region or daily experiences.'
             ]
         )
 
@@ -511,28 +513,40 @@ class OpenAIClient:
             'Personalization directives:',
             '1. Keep the narrative clear and supportive, mirroring the requested tone.',
             '2. If cultural nuance is ambiguous, clarify it with comparisons familiar to the listed profiles.',
+            '3. CRITICAL CULTURE TAGS: Each profile lists specific cultures (e.g., "US, UK", "CN", "JP"). Use THOSE exact cultures for analogies and references.',
+            '4. For crossCulture entries: Draw parallels to movies, idioms, social norms, or daily scenarios from EACH profile\'s listed culture tags.',
+            '5. Example: If profile has cultures="US,UK", reference American/British pop culture, sports, or workplace norms they would recognize.'
         ]
+
         if request.profile:
             demographics = request.profile.demographics
             personalization_guidelines.append(
-                f"3. Emphasize takeaways that help {request.profile.name} ({demographics.region}) understand emotional subtext or etiquette around the slang."
+                f"6. Emphasize takeaways that help {request.profile.name} ({demographics.region}) understand emotional subtext or etiquette around the slang."
             )
         if len(variant_profiles) > 1:
             personalization_guidelines.append(
-                "4. Make crossCulture entries distinct—avoid repeating examples between profiles; address each persona’s unique background."
+                "7. Make crossCulture entries distinct—avoid repeating examples between profiles; address each persona's unique background."
             )
 
         language_instructions = [
-            f"All narrative, summaries, and explanations MUST be written in {primary_language}.",
-            f"IMPORTANT: Every string in the JSON output MUST be exclusively in {primary_language}.",
-            "Do NOT copy knowledge base text verbatim if it is not in the primary language—paraphrase and translate it into the primary language.",
-            "IGNORE any language mentioned in profiles or sources; they do NOT change the output language.",
-            "Do NOT write full sentences in other languages. At most include a single quoted term in parentheses.",
+            f"=== CRITICAL OUTPUT LANGUAGE REQUIREMENT ===",
+            f"PRIMARY LANGUAGE: {primary_language}",
+            f"ALL text output MUST be written EXCLUSIVELY in {primary_language}.",
+            f"This applies to EVERY field: background.summary, background.detail, background.highlights, crossCulture[].headline, crossCulture[].analogy, crossCulture[].context, crossCulture[].notes, confidence.notes, reasoningNotes.",
+            f"",
+            f"IMPORTANT RULES:",
+            f"1. Write ALL explanations, summaries, and narratives in {primary_language}.",
+            f"2. NEVER use other languages for full sentences or explanations.",
+            f"3. At most, include a single quoted term in parentheses (e.g., '(idiom: break a leg)') while keeping the explanation in {primary_language}.",
+            f"4. IGNORE any language hints from profiles, knowledge base, or sources - they do NOT change the output language.",
+            f"5. If the knowledge base contains text in other languages, you MUST translate/paraphrase it into {primary_language}.",
+            f"6. The 'lang' field in JSON MUST be set to the primary language code.",
+            f"",
+            f"VERIFICATION STEP:",
+            f"Before returning JSON, re-read EVERY field. If ANY portion is not natural {primary_language}, translate it immediately.",
+            f"If you cannot express something in {primary_language}, use the {primary_language} equivalent of 'not available' instead of switching languages.",
+            f"=== END LANGUAGE REQUIREMENT ===",
         ]
-        language_instructions.extend([
-            "Before returning the JSON, re-read every field (background, crossCulture, confidence, reasoningNotes). If any sentence is not natural in the primary language, translate or rewrite it until it is.",
-            "If a concept cannot be described in the primary language, replace the value with the primary-language equivalent of 'translation unavailable' instead of using another language."
-        ])
 
         lines = [
             'You are LinguaLens Deep Explain.',

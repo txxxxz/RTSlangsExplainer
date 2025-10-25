@@ -8,6 +8,25 @@
   overflow: hidden;
 }
 
+/* Ensure the root container works in fullscreen - use !important to override any conflicts */
+:fullscreen .lingualens-root,
+:-webkit-full-screen .lingualens-root,
+:-moz-full-screen .lingualens-root,
+:-ms-fullscreen .lingualens-root {
+  position: fixed !important;
+  z-index: 2147483646 !important;
+  inset: 0 !important;
+}
+
+/* Ensure parent fullscreen container allows our overlay */
+:fullscreen,
+:-webkit-full-screen,
+:-moz-full-screen,
+:-ms-fullscreen {
+  /* Allow child elements to be positioned */
+  position: relative;
+}
+
 .lingualens-root .hidden {
   display: none;
 }
@@ -322,6 +341,16 @@
   transform: translate(-50%, -50%);
   pointer-events: auto;
   transition: all 0.2s ease;
+  z-index: 2147483645;
+}
+
+/* When in fullscreen mode, ensure the button is properly positioned with fixed */
+:fullscreen .lingualens-trigger,
+:-webkit-full-screen .lingualens-trigger,
+:-moz-full-screen .lingualens-trigger,
+:-ms-fullscreen .lingualens-trigger {
+  position: fixed !important;
+  z-index: 2147483645 !important;
 }
 
 .lingualens-trigger:hover:not(:disabled) {
@@ -357,6 +386,16 @@
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  z-index: 2147483645;
+}
+
+/* Ensure bubble works in fullscreen */
+:fullscreen .lingualens-bubble,
+:-webkit-full-screen .lingualens-bubble,
+:-moz-full-screen .lingualens-bubble,
+:-ms-fullscreen .lingualens-bubble {
+  position: fixed !important;
+  z-index: 2147483645 !important;
 }
 
 .lingualens-bubble .bubble-header {
@@ -553,6 +592,18 @@
   gap: 20px;
   pointer-events: auto;
   overflow-y: auto;
+  z-index: 2147483645;
+}
+
+/* Ensure drawer works in fullscreen */
+:fullscreen .lingualens-drawer,
+:-webkit-full-screen .lingualens-drawer,
+:-moz-full-screen .lingualens-drawer,
+:-ms-fullscreen .lingualens-drawer {
+  position: fixed !important;
+  z-index: 2147483645 !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
 }
 
 .lingualens-drawer .drawer-header {

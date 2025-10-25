@@ -20,13 +20,28 @@ export const TriggerButton: React.FC<TriggerButtonProps> = ({
     return null;
   }
 
+  // Check if we're in fullscreen mode
+  const fullscreenElement = 
+    document.fullscreenElement ||
+    (document as any).webkitFullscreenElement ||
+    (document as any).mozFullScreenElement ||
+    (document as any).msFullscreenElement;
+  
+  const isFullscreen = !!fullscreenElement;
+
   const fallbackLeft = typeof window !== 'undefined' ? window.innerWidth / 2 - 24 : 0;
   const fallbackTop = typeof window !== 'undefined' ? window.innerHeight - 180 : 0;
-  const scrollTop = typeof window !== 'undefined' ? window.scrollY : 0;
-  const scrollLeft = typeof window !== 'undefined' ? window.scrollX : 0;
+  
+  // In fullscreen mode, always use fixed positioning with no scroll offset
+  const scrollTop = !isFullscreen && typeof window !== 'undefined' ? window.scrollY : 0;
+  const scrollLeft = !isFullscreen && typeof window !== 'undefined' ? window.scrollX : 0;
+  
   const style: React.CSSProperties = {
-    left: (position?.left ?? fallbackLeft) + scrollLeft,
-    top: (position?.top ?? fallbackTop) + scrollTop,
+    // Always use fixed in fullscreen, otherwise use absolute
+    position: isFullscreen ? 'fixed' : 'absolute',
+    // In fullscreen, use position directly; otherwise add scroll offset
+    left: isFullscreen ? (position?.left ?? fallbackLeft) : (position?.left ?? fallbackLeft) + scrollLeft,
+    top: isFullscreen ? (position?.top ?? fallbackTop) : (position?.top ?? fallbackTop) + scrollTop,
     opacity: disabled ? 0.5 : 1,
     cursor: disabled ? 'not-allowed' : 'pointer'
   };
